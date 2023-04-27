@@ -15,7 +15,9 @@ executable slyce
   hs-source-dirs:      src
   main-is:             Main.hs
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
+  build-depends:
+    base >= 4.7 && < 5,
+    unbound-generics >= 0.2
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
@@ -25,3 +27,5 @@ executable slyce
                        -Wmissing-home-modules
                        -Wpartial-fields
                        -Wredundant-constraints
+  default-extensions:
+    DeriveGeneric

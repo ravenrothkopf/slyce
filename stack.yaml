@@ -40,7 +40,8 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps:
+- unbound-generics-0.4.2@sha256:bd8f77bb4414af56510d3a7a5f5b3f0e9b019ca0fb78862d51ab21fcd9a58859,5513
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
