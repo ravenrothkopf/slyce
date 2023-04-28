@@ -17,7 +17,8 @@ executable slyce
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,
-    unbound-generics >= 0.2
+    unbound-generics >= 0.2,
+    mtl >= 2.2.1
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
@@ -29,3 +30,6 @@ executable slyce
                        -Wredundant-constraints
   default-extensions:
     DeriveGeneric
+    DeriveAnyClass
+    MultiParamTypeClasses
+    DerivingStrategies
