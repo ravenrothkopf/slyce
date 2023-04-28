@@ -17,11 +17,7 @@ data Term
   | App Term Term                          -- application `a b`
   | Pi Type (Unbound.Bind TermName Type)   -- function type `(x : A) -> B`
   | Ann Term Type                          -- annotated terms `(a : A)`
-  deriving (Show, Generic, Unbound.Alpha)
-
-instance Unbound.Subst Term Term where
-    isvar (Var x) = Just (Unbound.SubstName x)
-    isvar _ = Nothing
+  deriving (Show, Generic, Unbound.Alpha, Unbound.Subst Term)
 
 {-
 xName = Unbound.string2Name "x"

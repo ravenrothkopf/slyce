@@ -8,11 +8,12 @@ import Control.Monad.Except
     MonadIO (..),
     runExceptT,
     unless,
-    void,
+    --void,
   )
 import Control.Monad.Reader
   ( MonadReader (local),
     ReaderT (runReaderT),
+    Reader, runReader,
     asks,
   )
 
@@ -23,9 +24,16 @@ import Ast
 -- Type Checking Monad
 -- A stack of four monads carrying various info:
 -- IO, Errors, Environment, Freshness
-type TcMonad = Unbound.FreshMT (ReaderT Env (ExceptT Err IO))
+--type TcMonad = Unbound.FreshMT (ReaderT Env (ExceptT Err IO))
+--type TcMonad = Unbound.FreshMT (Reader Env) --simple version: fresh and env
+type TcMonad = Unbound.FreshMT (ReaderT Env IO)
+-- TODO: ^^how simple should this be? do we need IO?
 
-data Err = Err
+-- TODO: what is the type?
+--runTcMonad :: 
+runTcMonad m = runReader (Unbound.runFreshMT m) emptyEnv
+
+--data Err = Err
 
 -- | Environment manipulation and accessing functions
 -- The context 'gamma' is a list
@@ -60,7 +68,7 @@ inferType term = typeCheckTerm term Nothing
 
 -- abstraction from `Term -> Type -> Ctx -> Bool`
 checkType :: Term -> Type -> TcMonad ()
-checkType term typ = void $ typeCheckTerm term (Just typ)
+checkType term typ = typeCheckTerm term (Just typ) >> return ()
 
 -- second argument is Nothing if used in inference mode
 typeCheckTerm :: Term -> Maybe Type -> TcMonad Type
