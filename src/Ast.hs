@@ -50,3 +50,5 @@ data Decl
   deriving (Show, Generic, Typeable)
   deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
 
+mkSig :: TermName -> Type -> Decl
+mkSig x typ = TypeSig (Sig x typ)

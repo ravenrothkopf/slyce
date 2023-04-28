@@ -14,6 +14,7 @@ extra-source-files:  README.md
 executable slyce
   hs-source-dirs:      src
   main-is:             Main.hs
+  other-modules:       Ast, Context
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,

@@ -14,13 +14,3 @@ main = do
     [pathToFile] <- getArgs
     typeCheckFile pathToFile
     exitSuccess
-
-    {-
-type Ctx = [(Var, Type)]
-
-inferType :: Term -> Ctx -> Maybe Type
-inferType (Var x) ctx = lookupTy ctx x
-inferType Type ctx = Just Type
-
-lookupTy = undefined
--}

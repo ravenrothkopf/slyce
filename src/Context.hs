@@ -66,7 +66,11 @@ checkType term typ = void $ typeCheckTerm term (Just typ)
 typeCheckTerm :: Term -> Maybe Type -> TcMonad Type
 typeCheckTerm (Var x)        Nothing = lookupType x >>= return . sigType
 typeCheckTerm U              Nothing = return U -- TODO: err?
-typeCheckTerm (Pi typA bnd)  Nothing = return U -- TODO: check if valid
+typeCheckTerm (Pi typA bnd)  Nothing = do
+    (x, typB) <- Unbound.unbind bnd
+    checkType typA U
+    extendCtx (mkSig x typA) (checkType typB U)
+    return U
 typeCheckTerm (App t1 t2)    Nothing = do
     (Pi typA bnd) <- inferType t1
     checkType t2 typA
@@ -74,15 +78,15 @@ typeCheckTerm (App t1 t2)    Nothing = do
     return $ Unbound.subst x typA typB
 typeCheckTerm (Ann term typ) Nothing = return typ
 typeCheckTerm (Lam bnd)      Nothing = undefined -- TODO: throw error
-typeCheckTerm (Lam bnd) (Just (Pi typA bnd2)) =
-    -- add x:A to context
-    -- get body of Lam
-    -- get typB
-    checkType body (Just typB)
+typeCheckTerm (Lam bnd) (Just (Pi typA bnd2)) = do
+    (x,  body) <- Unbound.unbind bnd    -- get body of Lam
+    (x2, typB) <- Unbound.unbind bnd2   -- get typB
+    extendCtx (mkSig x typA) (checkType body typB) -- add x:A to ctx
+    return $ Pi typA bnd2
 typeCheckTerm (Lam _)      (Just nf) = undefined -- TODO: throw error
 typeCheckTerm term (Just typ) = do
-    typ' <- inferTyp term
-    unless (Unbound.aeq typ typ') $ -- throw err
+    typ' <- inferType term
+    unless (Unbound.aeq typ typ') $ error "type mistmatch" -- throw err
     return typ
 
 {-
@@ -95,7 +99,7 @@ runtc $ typeCheckTerm (Var ravenName) Nothing
 lookupType :: TermName -> TcMonad Sig
 lookupType = undefined
 
-extendCtx :: Decl -> TcMonad Term -> TcMonad Term
+extendCtx :: Decl -> TcMonad a -> TcMonad a
 extendCtx = undefined
 
 --err :: (Disp a) => [a] -> TcMonad b
