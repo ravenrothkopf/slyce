@@ -4,6 +4,7 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 
 import Ast
+import Context
 
 typeCheckFile :: String -> IO ()
 typeCheckFile = undefined
