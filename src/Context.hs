@@ -30,8 +30,8 @@ type TcMonad = Unbound.FreshMT (ReaderT Env IO)
 -- TODO: ^^how simple should this be? do we need IO?
 
 -- TODO: what is the type?
---runTcMonad :: 
-runTcMonad m = runReader (Unbound.runFreshMT m) emptyEnv
+runTcMonad :: TcMonad a -> IO a
+runTcMonad m = runReaderT (Unbound.runFreshMT m) emptyEnv
 
 --data Err = Err
 
