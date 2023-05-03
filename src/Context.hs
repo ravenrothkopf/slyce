@@ -17,7 +17,7 @@ import Control.Monad.Reader
     asks,
   )
 
-import Ast ( TermName, Sig, Decl )
+import Ast
 
 ---------------------------------
 
@@ -29,7 +29,6 @@ import Ast ( TermName, Sig, Decl )
 type TcMonad = Unbound.FreshMT (ReaderT Env IO)
 -- TODO: ^^how simple should this be? do we need IO?
 
--- TODO: what is the type?
 runTcMonad :: TcMonad a -> IO a
 runTcMonad m = runReaderT (Unbound.runFreshMT m) emptyEnv
 
@@ -39,37 +38,49 @@ runTcMonad m = runReaderT (Unbound.runFreshMT m) emptyEnv
 -- The context 'gamma' is a list
 data Env = Env
   { -- | elaborated term and datatype declarations.
-    ctx :: [Decl],
+    getCtx :: [Decl],
     -- | how long the tail of "global" variables in the context is
     --    (used to supress printing those in error messages)
-    globals :: Int,
+    getGlobals :: Int,
     -- | Type declarations (signatures): it's not safe to
     -- put these in the context until a corresponding term
     -- has been checked.
-    hints :: [Sig]--,
+    getHints :: [Sig]--,
     -- | what part of the file we are in (for errors/warnings)
     --sourceLocation :: [SourceLocation]
-  }
+  } deriving (Show)
 
 emptyEnv :: Env
-emptyEnv =
-  Env
-    { ctx = [],
-      globals = 0,
-      hints = []--,
-      --sourceLocation = []
-    }
+emptyEnv = Env [] 0 []
 
 ---------------------------------
 
 lookupType :: TermName -> TcMonad Sig
-lookupType = undefined
+lookupType v = do
+    ctx <- asks getCtx
+    return $ lookupVar ctx
+        where lookupVar [] = error $ "variable " ++ show v ++ " not found"
+              lookupVar (TypeSig sig : ctx)
+                  | v == sigName sig = sig
+                  | otherwise = lookupVar ctx
+              lookupVar (_ : ctx) = lookupVar ctx
 
+-- works like a continuation by executing the computation in a modified env
+-- local :: (r -> r) -> m a -> m a
+-- pattern match on the Env and modify only the `getCtx` field
 extendCtx :: Decl -> TcMonad a -> TcMonad a
-extendCtx = undefined
+extendCtx decl = local (\m@Env{getCtx=ctx} -> m{getCtx=decl:ctx})
 
 --err :: (Disp a) => [a] -> TcMonad b
 --err = undefined
 --
 --warn :: (Disp a) => a -> TcMonad ()
 --warn = undefined
+--
+
+    {-
+x = Unbound.s2n "x"
+Env.runTcMonad $ typeCheckTerm (App (Ann (Lam (Unbound.bind x (Var x))) (Pi U (Unbound.bind x U))) U) (Just U)
+
+it works!
+        -}
