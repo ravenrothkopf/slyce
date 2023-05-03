@@ -5,6 +5,7 @@ import System.Exit (exitFailure, exitSuccess)
 
 import Ast
 import Context
+import TypeCheck
 
 typeCheckFile :: String -> IO ()
 typeCheckFile = undefined
