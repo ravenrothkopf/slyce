@@ -14,11 +14,11 @@ extra-source-files:  README.md
 executable slyce
   hs-source-dirs:      src
   main-is:             Main.hs
-  other-modules:       Ast, Context
+  other-modules:       Ast, Context, Equality, TypeCheck
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,
-    unbound-generics >= 0.2,
+    unbound-generics >= 0.4.3,
     mtl >= 2.2.1
   ghc-options:         -Wall
                        -Wcompat
