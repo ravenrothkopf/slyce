@@ -1,4 +1,13 @@
-module Context where
+module Context
+    ( runTcMonad
+    , TcMonad
+    , Env(..)
+    , lookupType
+    , lookupDef
+    , extendCtx
+    , extendCtxs
+    )
+    where
 
 --import PrettyPrint (D (..), Disp (..), Doc, SourcePos, render)
 import Unbound.Generics.LocallyNameless as Unbound
@@ -16,6 +25,7 @@ import Control.Monad.Reader
     Reader, runReader,
     asks,
   )
+import Control.Applicative ((<|>))
 
 import Ast
 
@@ -47,7 +57,7 @@ data Env = Env
     -- has been checked.
     getHints :: [Sig]--,
     -- | what part of the file we are in (for errors/warnings)
-    --sourceLocation :: [SourceLocation]
+    --getLoc :: [SourceLocation]
   } deriving (Show)
 
 emptyEnv :: Env
@@ -65,11 +75,21 @@ lookupType v = do
                   | otherwise = lookupVar ctx
               lookupVar (_ : ctx) = lookupVar ctx
 
+lookupDef :: TermName -> TcMonad (Maybe Term)
+lookupDef x = do
+    ctx <- asks getCtx
+    return $ foldr (\d acc -> (checkDecl d) <|> acc) Nothing ctx
+        where checkDecl (Def x term) = Just term
+              checkDecl _            = Nothing
+
 -- works like a continuation by executing the computation in a modified env
 -- local :: (r -> r) -> m a -> m a
 -- pattern match on the Env and modify only the `getCtx` field
 extendCtx :: Decl -> TcMonad a -> TcMonad a
-extendCtx decl = local (\m@Env{getCtx=ctx} -> m{getCtx=decl:ctx})
+extendCtx decl = local (\m@Env{getCtx = ctx} -> m{getCtx = decl:ctx})
+
+extendCtxs :: [Decl] -> TcMonad a -> TcMonad a
+extendCtxs decls = local (\m@Env{getCtx = ctx} -> m{getCtx = decls++ctx})
 
 --err :: (Disp a) => [a] -> TcMonad b
 --err = undefined
@@ -78,9 +98,9 @@ extendCtx decl = local (\m@Env{getCtx=ctx} -> m{getCtx=decl:ctx})
 --warn = undefined
 --
 
-    {-
+{-
 x = Unbound.s2n "x"
 Env.runTcMonad $ typeCheckTerm (App (Ann (Lam (Unbound.bind x (Var x))) (Pi U (Unbound.bind x U))) U) (Just U)
 
 it works!
-        -}
+-}
