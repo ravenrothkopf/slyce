@@ -42,8 +42,8 @@ import Ast
 %nonassoc NOELSE 'else'
 
 %%
-Expr: let VAR '=' Expr in Expr { App (Body [$2] [$6]) $4 }
-    | '\' VAR '->' Expr { Body [$2] [$4] }
+Expr: let VAR '=' Expr in Expr { App (Lam [$2] [$6]) $4 }
+    | '\' VAR '->' Expr { Lam [$2] [$4] }
     | Pair { $1 }
 
 Pair: Pair Single { App $1 $2 }
