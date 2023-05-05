@@ -1,5 +1,4 @@
 {
-{-# OPTIONS_GHC -w #-}
 module Scanner (Token(..),scanTokens) where
 import Ast
 }
@@ -31,6 +30,7 @@ tokens :-
   \:                            { \s -> TokenColon }
   \=                            { \s -> TokenEq }
   \\                            { \s -> TokenLam }
+  \,                            { \s -> TokenComma }
   \(                            { \s -> TokenLparen }
   \)                            { \s -> TokenRparen }
   \{                            { \s -> TokenLbrace }
@@ -41,11 +41,20 @@ tokens :-
 {
 data Token = TokenLet
     | TokenIn
+    | TokenWhere
+    | TokenIf
+    | TokenThen
+    | TokenElse
+    | TokenData
+    | TokenOf
     | TokenNum Int
     | TokenVar String
     | TokenEq 
     | TokenLambda
-    | TokenArrow     
+    | TokenArrow 
+    | TokenBar
+    | TokenColon
+    | TokenComma    
     | TokenLparen 
     | TokenRparen 
     | TokenLbrace
@@ -53,6 +62,7 @@ data Token = TokenLet
     | TokenLbracket
     | TokenRbracket
     | TokenDot
+    | TokenType
     deriving (Eq,Show)
 scanTokens = alexScanTokens
 }

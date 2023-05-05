@@ -37,9 +37,8 @@ import Ast
   ']'       { TokenRbracket }
   Bool      { TokenBool $$ }
   Unit      { TokenUnit $$ }
+  VAR       { TokenVar $$ }
 
-%left '+' '-'
-%left '*'
 %nonassoc NOELSE 'else'
 
 %%
@@ -51,10 +50,9 @@ Pair: Pair Single { App $1 $2 }
     | Single { $1 }
 
 Single: '(' Expr ')' { $2 }
-    | int   { Int $1 }
     | VAR   { Var [$1] }  
-    | true  { Lit (BoolLit True)}
-    | false { Lit (BoolLit False)}
+    | true  { BoolLit True}
+    | false { BoolLit False}
 
 {
 parseError :: [Token] -> a
