@@ -1,4 +1,8 @@
-module TypeCheck where
+module TypeCheck
+    ( typeCheckModule
+    , inferType
+    , checkType
+    ) where
 
 import qualified Unbound.Generics.LocallyNameless as Unbound
 import qualified Control.Monad.Except as Ex
@@ -90,3 +94,7 @@ runtc $ typeCheckTerm (Var ravenName) Nothing
 
 -- TODO: function to type check a Decl, handle hints, context, etc
 -- TODO: function to type check all Decls in a file/module
+
+typeCheckModule :: Module -> TcMonad Type
+typeCheckModule mod = do
+    undefined

@@ -49,9 +49,10 @@ program            --> Module
     : decls          { Module $1 }
     | {- empty -}    { Module [] }
 
-decls              --> [Decl]
-    : decl ';' decls { $1 : $3 }
-    | decl           { [$1] }
+decls               --> [Decl]
+    : decl ';' decls  { $1 : $3 }
+    | decl ';'        { [$1] }
+    | decl            { [$1] }
 
 decl               --> Decl
     : typeSig        { TypeSig $1 } 
