@@ -1,5 +1,9 @@
 {
-module Scanner (Token(..),scanTokens) where
+module Scanner
+    ( Token(..)
+    , scanTokens
+    ) where
+
 import Ast
 }
 
@@ -8,12 +12,15 @@ import Ast
 $digit = 0-9
 $alpha = [a-zA-Z]
 $eol   = [\n]
+@identifier = [a-zA-Z_] [a-zA-Z0-9_\']*
 
 tokens :-
   \,                            ;
-  $eol                          ;
+  $eol                          { \s -> TokenSemi }
   $white+                       ;
   "#".*                         ;
+  -- <comment> "(*"                { nestComment }
+  -- <comment> "*)"                { unNestComment }
   U                             { \s -> TokenType }
   of                            { \s -> TokenOf }
   data                          { \s -> TokenData }
@@ -24,6 +31,10 @@ tokens :-
   then                          { \s -> TokenThen }
   else                          { \s -> TokenElse }
   $digit+                       { \s -> TokenNum (read s) }
+  Unit                          { \s -> TokenUnit }
+  Bool                          { \s -> TokenBool }
+  True                          { \s -> TokenTrue }
+  False                         { \s -> TokenFalse }
   "->"                          { \s -> TokenArrow }
   \|                            { \s -> TokenBar }
   \.                            { \s -> TokenDot }
@@ -33,11 +44,11 @@ tokens :-
   \,                            { \s -> TokenComma }
   \(                            { \s -> TokenLparen }
   \)                            { \s -> TokenRparen }
-  \{                            { \s -> TokenLbrace }
+  \{                            { \s -> TokenLbrace }   --TODO: multiline defs
   \}                            { \s -> TokenRbrace }
   \[                            { \s -> TokenLbracket }
   \]                            { \s -> TokenRbracket }
-  $alpha [$alpha $digit \, \_ \']* { \s -> TokenVar s }
+  @identifier                   { \s -> TokenVar s }
 {
 data Token = TokenLet
     | TokenIn
@@ -50,10 +61,11 @@ data Token = TokenLet
     | TokenNum Int
     | TokenVar String
     | TokenEq 
-    | TokenLambda
+    | TokenLam
     | TokenArrow 
     | TokenBar
     | TokenColon
+    | TokenSemi
     | TokenComma    
     | TokenLparen 
     | TokenRparen 
@@ -63,6 +75,10 @@ data Token = TokenLet
     | TokenRbracket
     | TokenDot
     | TokenType
+    | TokenTrue
+    | TokenFalse
+    | TokenBool
+    | TokenUnit
     deriving (Eq,Show)
 scanTokens = alexScanTokens
 }

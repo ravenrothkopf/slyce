@@ -62,3 +62,10 @@ data Decl
 
 mkSig :: TermName -> Type -> Decl
 mkSig x typ = TypeSig (Sig x typ)
+
+data Module = Module
+  { --moduleName :: MName,
+    --moduleImports :: [ModuleImport],
+    moduleDecls :: [Decl]
+  }
+  deriving (Show, Generic, Typeable)

@@ -7,8 +7,17 @@ import Ast
 import Context
 import TypeCheck
 
+import Parser (parseProgram )
+
+readInput :: String -> IO String
+readInput "-" = getContents
+readInput filename = readFile filename
+
+parseAst :: String -> Module
+parseAst = parseProgram
+
 typeCheckFile :: String -> IO ()
-typeCheckFile = undefined
+typeCheckFile contents = undefined
     {-
 typeCheckFile filePath = do
   putStrLn $ "loading " ++ filePath ++ "..."
@@ -21,5 +30,6 @@ typeCheckFile filePath = do
 main :: IO ()
 main = do
     [pathToFile] <- getArgs
-    typeCheckFile pathToFile
+    contents <- readInput pathToFile
+    typeCheckFile contents
     exitSuccess
