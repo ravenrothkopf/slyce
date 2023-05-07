@@ -61,7 +61,7 @@ decl               --> Decl
 --TODO: the rest...
 
 name               --> TermName
-    : VAR            { Unbound.s2n "$1" }
+    : VAR            { Unbound.s2n $1 }
 
 typeSig            --> Sig
     : name ':' term  { Sig $1 $3 }
@@ -69,6 +69,7 @@ typeSig            --> Sig
 term                                   --> Term
     : '\\' name '.' term                 { Lam (Unbound.bind $2 $4) }
     | '(' name ':' term ')' '->' term    { Pi $4 (Unbound.bind $2 $7) }
+    | term '->' term                     { Pi $1 (Unbound.bind (Unbound.s2n "_") $3) }
     | term term                          { App $1 $2 }
     | '(' term ':' term ')'              { Ann $2 $4 }
     | 'U'                                { U }

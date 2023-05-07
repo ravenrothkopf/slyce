@@ -13,11 +13,12 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 $eol   = [\n]
 @identifier = [a-zA-Z_] [a-zA-Z0-9_\']*
+$whitespace = [\ \t]
 
 tokens :-
   \,                            ;
-  $eol                          { \s -> TokenSemi }
-  $white+                       ;
+  $eol+                         { \s -> TokenSemi }
+  $whitespace+                  ;
   "#".*                         ;
   -- <comment> "(*"                { nestComment }
   -- <comment> "*)"                { unNestComment }
@@ -36,6 +37,7 @@ tokens :-
   True                          { \s -> TokenTrue }
   False                         { \s -> TokenFalse }
   "->"                          { \s -> TokenArrow }
+  \;                            { \s -> TokenSemi }
   \|                            { \s -> TokenBar }
   \.                            { \s -> TokenDot }
   \:                            { \s -> TokenColon }
