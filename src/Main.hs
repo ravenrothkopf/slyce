@@ -13,19 +13,12 @@ readInput :: String -> IO String
 readInput "-" = getContents
 readInput filename = readFile filename
 
-parseAst :: String -> Module
-parseAst = parseProgram
-
 typeCheckFile :: String -> IO ()
-typeCheckFile contents = undefined
-    {-
-typeCheckFile filePath = do
-  putStrLn $ "loading " ++ filePath ++ "..."
-  program <- read <$> readFile filePath
-  putStrLn "type checking..."
-  runTcMonad program
-  --defs <- d `exitWith` putTypeError
-  ---}
+typeCheckFile contents = do
+    let mod = parseProgram contents
+    types <- runTcMonad $ typeCheckModule mod
+    mapM_ print types
+
 
 main :: IO ()
 main = do

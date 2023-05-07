@@ -51,6 +51,11 @@ equal a b =
                 (_, b1) <- Unbound.unbind bnd1
                 (_, b2) <- Unbound.unbind bnd2
                 equal b1 b2
+            (Let rhs1 bnd1, Let rhs2 bnd2) -> do
+                equal rhs1 rhs2
+                (_, body1) <- Unbound.unbind bnd1
+                (_, body2) <- Unbound.unbind bnd2
+                equal body1 body2
             (_, _) -> error "terms are not equal" -- TODO: use Env.err
 
 
@@ -93,5 +98,7 @@ whnf (LetPair a bnd)  = do
             -- substitute t1 for x and t2 for y in the body b
             whnf $ Unbound.instantiate bnd [t1, t2]
         _          -> return $ LetPair a' bnd
+whnf (Let rhs bnd)    = do
+    whnf $ Unbound.instantiate bnd [rhs]
 whnf term      = return term                   -- all types and lambda
 

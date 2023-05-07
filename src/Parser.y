@@ -81,7 +81,8 @@ term                                   --> Term
     | 'if' term 'then' term 'else' term  { If $2 $4 $6 }
     | '(' name ':' term ',' term ')'     { Sigma $4 (Unbound.bind $2 $6) }
     | '(' term ',' term ')'              { Pair $2 $4 }
-    | 'let' '(' name ',' name ')' '=' term 'in' term { LetPair $10 (Unbound.bind ($3, $5) $8) }
+    | 'let' '(' name ',' name ')' '=' term 'in' term { LetPair $8 (Unbound.bind ($3, $5) $10) }
+    | 'let' name '=' term 'in' term      { Let $4 (Unbound.bind $2 $6) }
     | name                               { Var $1 }
 --TokenLet VAR TokenEq Expr TokenIn Expr { App (Lam [$2] [$6]) $4 }
 

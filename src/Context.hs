@@ -4,8 +4,10 @@ module Context
     , Env(..)
     , lookupType
     , lookupDef
+    , lookupHint
     , extendCtx
     , extendCtxs
+    , extendHints
     )
     where
 
@@ -51,7 +53,7 @@ data Env = Env
     getCtx :: [Decl],
     -- | how long the tail of "global" variables in the context is
     --    (used to supress printing those in error messages)
-    getGlobals :: Int,
+    --getGlobals :: Int,
     -- | Type declarations (signatures): it's not safe to
     -- put these in the context until a corresponding term
     -- has been checked.
@@ -61,7 +63,7 @@ data Env = Env
   } deriving (Show)
 
 emptyEnv :: Env
-emptyEnv = Env [] 0 []
+emptyEnv = Env [] []
 
 ---------------------------------
 
@@ -82,6 +84,13 @@ lookupDef x = do
         where checkDecl (Def x term) = Just term
               checkDecl _            = Nothing
 
+lookupHint :: TermName -> TcMonad (Maybe Sig)
+lookupHint x = do
+    hints <- asks getHints
+    return $ foldr (\h acc -> (checkHint h) <|> acc) Nothing hints
+        where checkHint s@(Sig x t) = Just s
+              checkHint _           = Nothing
+
 -- works like a continuation by executing the computation in a modified env
 -- local :: (r -> r) -> m a -> m a
 -- pattern match on the Env and modify only the `getCtx` field
@@ -90,6 +99,9 @@ extendCtx decl = local (\m@Env{getCtx = ctx} -> m{getCtx = decl:ctx})
 
 extendCtxs :: [Decl] -> TcMonad a -> TcMonad a
 extendCtxs decls = local (\m@Env{getCtx = ctx} -> m{getCtx = decls++ctx})
+
+extendHints :: [Sig] -> TcMonad a -> TcMonad a
+extendHints h = local (\m@Env{getHints = hints} -> m{getHints = h++hints})
 
 --err :: (Disp a) => [a] -> TcMonad b
 --err = undefined

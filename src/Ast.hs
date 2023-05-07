@@ -24,13 +24,15 @@ data Term
   | If Term Term Term                       -- eliminator for Bool, `p ? c | e`
   | Sigma Type (Unbound.Bind TermName Type) -- Sigma type, `(x : A, B)`
   | Pair Term Term                          -- constructor for Sigma types, `(a,b)`
+  -- `let (x,y) = a in b`   ->   LetPair a (bind (x,y) b)
   | LetPair Term (Unbound.Bind (TermName, TermName) Term) -- destructor for Sigma types
+  -- `let x = a in b`   ->   LetPair a (bind x b)
+  | Let Term (Unbound.Bind TermName Term)   -- convenience
   -- TODO:
   -- Type equality (Eq)
   -- Type Constructors (TCon)
   -- Term Constructors (DCon)
   -- case analysis (Match)
-  -- Let pattern matching
   deriving (Show, Generic, Unbound.Alpha, Unbound.Subst Term)
 
 {-
@@ -62,6 +64,9 @@ data Decl
 
 mkSig :: TermName -> Type -> Decl
 mkSig x typ = TypeSig (Sig x typ)
+
+mkDef :: TermName -> Term -> Decl
+mkDef x term = Def x term
 
 data Module = Module
   { --moduleName :: MName,

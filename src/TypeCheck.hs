@@ -50,30 +50,47 @@ typeCheckTerm (Ann term typ) Nothing = do
 typeCheckTerm UnitLit        Nothing = return UnitType
 typeCheckTerm (BoolLit True) Nothing = return BoolType
 typeCheckTerm (BoolLit False) Nothing = return BoolType
-typeCheckTerm (If p c e)     Nothing = do
-    checkType p BoolType
-    t <- inferType c
-    checkType e t
-    -- TODO: add definition of p to ctx
+typeCheckTerm (If a b c)     Nothing = do
+    checkType a BoolType
+    t <- inferType b
+    checkType c t
+    return t
+typeCheckTerm (Lam bnd)      Nothing = undefined -- TODO: throw error
+-- checking mode
+typeCheckTerm (If a b c)    (Just t) = do
+    checkType a BoolType
+    -- Flow sensitivity:
+    --  if a is `Var x`, then add `x = True` or `x = False` to respective branches
+    a' <- Equal.whnf a
+    let defBool (Var x) b = [mkDef x (BoolLit b)]
+        defBool _ _       = []
+    extendCtxs (defBool a' True) $ checkType b t
+    extendCtxs (defBool a' False) $ checkType c t
     return t
 typeCheckTerm (Pair a b)    (Just t) = do
     let Sigma typA bnd = t              -- fail if t is not a Sigma type
     (x, typB) <- Unbound.unbind bnd
     checkType a typA
-    extendCtx (mkSig x typA) (checkType b typB)
-    -- TODO: add (WHNF-reduced?) definitions of x and y to to ctx?
+    extendCtxs [mkSig x typA, mkDef x a] (checkType b typB)
     return t
-typeCheckTerm (LetPair a bnd) (Just t) = do
-    checkType t U
-    pairType <- inferType a
-    (Sigma typA bnd2) <- Equal.whnf pairType  -- `a` must be of Sigma type
+typeCheckTerm (LetPair rhs bnd) (Just t) = do
+    pairType <- inferType rhs
+    (Sigma typA bnd2) <- Equal.whnf pairType  -- `rhs` must be of Sigma type
     ((x,y), body) <- Unbound.unbind bnd
     let typB = Unbound.instantiate bnd2 [Var x]
-    extendCtxs [mkSig x typA, mkSig y typB] (checkType body t)
-    -- TODO: add (WHNF-reduced?) definitions of x and y to to ctx?
+    rhs' <- Equal.whnf rhs
+    let defPair (Var z) = [mkDef z $ Pair (Var x) (Var y)]
+        defPair _       = []
+    extendCtxs ([mkSig x typA, mkSig y typB] ++ defPair rhs') $ checkType body t
     return t
-typeCheckTerm (Lam bnd)      Nothing = undefined -- TODO: throw error
--- checking mode
+typeCheckTerm (Let rhs bnd) mode = do
+    typA <- inferType rhs
+    (x, body) <- Unbound.unbind bnd
+    typB <- extendCtxs [mkSig x typA, mkDef x rhs] $ typeCheckTerm body mode
+    case mode of
+        -- avoid scoping issues by substituting x with its definition
+        Just _  -> return typB
+        Nothing -> return $ Unbound.subst x rhs typB
 typeCheckTerm (Lam bnd) (Just (Pi typA bnd2)) = do
     (x,  body) <- Unbound.unbind bnd    -- get body of Lam
     (x2, typB) <- Unbound.unbind bnd2   -- get typB
@@ -95,6 +112,41 @@ runtc $ typeCheckTerm (Var ravenName) Nothing
 -- TODO: function to type check a Decl, handle hints, context, etc
 -- TODO: function to type check all Decls in a file/module
 
-typeCheckModule :: Module -> TcMonad Type
+typeCheckDef :: Decl -> TcMonad Type
+typeCheckDef (Def name term) = do
+    h <- lookupHint name
+    case h of
+        Nothing -> inferType term
+            -- TODO: add these to ctx?
+        Just s  -> do
+            checkType term (sigType s)
+            return $ sigType s
+typeCheckDef _    = error "need a def"
+
+typeCheckModule :: Module -> TcMonad [Type]
 typeCheckModule mod = do
-    undefined
+    let decls = moduleDecls mod
+
+        -- put all the defs into the ctx
+        addDef  :: Decl -> [Decl] -> [Decl]
+        addDef d@(Def _ _) acc = d:acc
+        addDef _ acc = acc
+
+        -- put all the sigs into the hints
+        addHint :: Decl -> [Sig] -> [Sig]
+        addHint (TypeSig s) acc = s:acc
+        addHint _ acc = acc
+
+        ctx   = (foldr addDef  [] decls :: [Decl])
+        hints = (foldr addHint [] decls :: [Sig])
+
+        addCtx = extendCtxs ctx
+        addHints = extendHints hints
+
+    -- TcMonad [Type]
+    --liftM (zip ((\(Def n _) -> n) ctx)) $
+    addCtx $ addHints $ mapM typeCheckDef ctx
+    -- go through each top level def
+    -- type check each one against its signature (if exists)
+    -- otherwise infer the type
+    -- print the type of each def
