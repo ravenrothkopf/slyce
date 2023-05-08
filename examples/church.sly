@@ -1,0 +1,8 @@
+nat : U
+nat = (a:U) -> a -> (a -> a) -> a
+
+zero : nat
+zero = \a. \x. \f. x
+
+succ : nat -> nat
+succ = \a. \x. \f. f (x a f)

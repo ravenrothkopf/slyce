@@ -1,0 +1,8 @@
+cons : [t1:U] -> [t2:U] -> t1 -> t2 -> (t1 * t2)
+cons = \[a]. \[b]. \l . \r . (l,r)
+
+nil : Unit
+nil = ()
+
+mylist : (Bool * (Bool * Unit))
+mylist = cons True (cons False nil)
