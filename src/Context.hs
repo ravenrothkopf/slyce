@@ -32,6 +32,7 @@ import Control.Monad.Reader
     asks,
   )
 import Control.Applicative ((<|>))
+import Data.List (intercalate)
 
 import Ast
 
@@ -51,7 +52,7 @@ data SourceLocation where
 data Err = Err [SourceLocation] String
 
 instance Show Err where
-    show (Err [] msg) = msg ++ "\nin the expression:\nPosition Unknown"
+    show (Err [] msg) = msg-- ++ "\nin the expression:\nPosition Unknown"
     show (Err ((SourceLocation p term) : _) msg) =
         show p ++ msg ++ "\nin the expression:\n" ++ show term
 
@@ -91,7 +92,7 @@ lookupType :: TermName -> TcMonad Sig
 lookupType v = do
     ctx <- asks getCtx
     case lookupVar ctx of
-        Nothing  -> err $ "Variable not found: " ++ show v
+        Nothing  -> err $ "Variable not found: " ++ show v ++ "\nin context: " ++ (intercalate "\n" $ map show $ take 5 ctx)
         Just sig -> return sig
         where lookupVar [] = Nothing
               lookupVar (TypeSig sig : ctx)

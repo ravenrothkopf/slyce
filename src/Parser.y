@@ -49,13 +49,16 @@ import Ast
 %%
 program            --> Module
     : decls          { Module $1 }
-    | '||' decls     { Module $2 }
+    | lines decls    { Module $2 }
     | {- empty -}    { Module [] }
 
-decls                --> [Decl]
-    : decl '||' decls  { $1 : $3 }
-    | decl '||'        { [$1] }
-    | decl             { [$1] }
+lines              --> ()
+    : '||' lines     { () }
+    | {- empty -}    { () }
+
+decls                 --> [Decl]
+    : decl lines decls  { $1 : $3 }
+    | decl lines        { [$1] }
 
 decl               --> Decl
     : typeSig        { TypeSig $1 } 
