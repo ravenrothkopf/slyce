@@ -1,2 +1,8 @@
 x : Bool
 x = True
+
+alwaysFalse : (x:Bool) -> Bool
+alwaysFalse = \x . False
+
+y : Bool
+y = alwaysFalse x

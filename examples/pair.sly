@@ -1,0 +1,14 @@
+fst : (b:Bool,Bool) -> Bool
+fst = \p . let (x,y) = p in x
+
+snd : (b:Bool,Bool) -> Bool
+snd = \z . let (x,y) = z in y
+
+q : (b:Bool,Bool)
+q = (True, False)
+
+t : Bool
+t = fst q
+
+f : Bool
+f = snd q

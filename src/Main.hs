@@ -3,26 +3,67 @@ module Main (main) where
 import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 
+import System.Console.GetOpt
+
+import Control.Monad (unless, when)
+
 import Ast
 import Context
 import TypeCheck
 
-import Parser (parseProgram )
+import Parser (parse)
+import Scanner (scanTokens)
 
 readInput :: String -> IO String
 readInput "-" = getContents
 readInput filename = readFile filename
 
-typeCheckFile :: String -> IO ()
-typeCheckFile contents = do
-    let mod = parseProgram contents
-    types <- runTcMonad $ typeCheckModule mod
-    mapM_ print types
+typeCheckProgram :: Module -> IO [(TermName, Type)]
+typeCheckProgram mod = do
+    res <- runTcMonad $ typeCheckModule mod
+    case res of
+        Left typeError -> do
+            print typeError
+            exitFailure
+        Right types -> return types
 
+data Flag = Scan | Parse | CheckTypes | Verbose
+    deriving (Show, Eq)
+
+options :: [OptDescr Flag]
+options = 
+    [ Option ['v']      ["verbose"]     (NoArg Verbose)    "chatty output"
+    , Option ['s', 'l'] ["scan", "lex"] (NoArg Scan)       "output scanned tokens"
+    , Option ['p']      ["parse"]       (NoArg Parse)      "output parsed AST"
+    , Option ['t']      ["type-check"]  (NoArg CheckTypes) "output checked types"
+    ]
 
 main :: IO ()
 main = do
-    [pathToFile] <- getArgs
+    argv <- getArgs
+    let (opts, args, errs) = getOpt Permute options argv
+
+    when (not (null errs)) $ do
+        mapM_ putStrLn errs
+        exitFailure
+
+    unless (length args == 1) $ do
+        putStrLn "Error: must provide one file as input"
+        exitFailure
+
+    let pathToFile = head args
     contents <- readInput pathToFile
-    typeCheckFile contents
+
+    let tokens = scanTokens contents
+    when (Scan `elem` opts) $ do
+        mapM_ print tokens
+
+    let mod = parse tokens
+    when (Parse `elem` opts) $ do
+        print mod
+
+    types <- typeCheckProgram mod
+    when (CheckTypes `elem` opts) $ do
+        mapM_ print types
+
     exitSuccess

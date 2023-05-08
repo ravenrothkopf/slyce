@@ -3,8 +3,16 @@ module Ast where
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic, from)
 import qualified Unbound.Generics.LocallyNameless as Unbound
+import Data.Function (on)
 
 ---------------------------------
+
+data SourcePos = Posn
+    !Int    -- line number
+    !Int    -- column number
+
+instance Show SourcePos where
+    show (Posn line col) = (show line) ++ ":" ++ (show col) ++ ":"
 
 type TermName = Unbound.Name Term
 
@@ -28,23 +36,47 @@ data Term
   | LetPair Term (Unbound.Bind (TermName, TermName) Term) -- destructor for Sigma types
   -- `let x = a in b`   ->   LetPair a (bind x b)
   | Let Term (Unbound.Bind TermName Term)   -- convenience
+  | Pos SourcePos Term
   -- TODO:
   -- Type equality (Eq)
   -- Type Constructors (TCon)
   -- Term Constructors (DCon)
   -- case analysis (Match)
-  deriving (Show, Generic, Unbound.Alpha, Unbound.Subst Term)
+  deriving (Show, Generic, Unbound.Subst Term)
 
-{-
-xName = Unbound.s2n "x"
-yName = Unbound.s2n "y"
+getTermPos :: Term -> SourcePos
+getTermPos (App a _) = getTermPos a
+getTermPos (Pi a _) = getTermPos a
+getTermPos (Pos p _) = p
+getTermPos t       = error $ "cannot get posn of " ++ show t
 
-idx = Lam (Unbound.bind xName (Var xName))
-idy = Lam (Unbound.bind yName (Var yName))
+-- Ignore Pos and Ann for equivalence checking
+instance Unbound.Alpha Term where
+  aeq' ctx (Ann a _) b = Unbound.aeq' ctx a b
+  aeq' ctx a (Ann b _) = Unbound.aeq' ctx a b
+  aeq' ctx (Pos _ a) b = Unbound.aeq' ctx a b
+  aeq' ctx a (Pos _ b) = Unbound.aeq' ctx a b
+  aeq' ctx a b = (Unbound.gaeq ctx `on` from) a b
 
-> Unbound.aeq idx idy
-True
--}
+instance Unbound.Alpha SourcePos where
+  aeq' _ _ _ = True
+  fvAny' _ _ = pure
+  open _ _ = id
+  close _ _ = id
+  isPat _ = mempty
+  isTerm _ = mempty
+  nthPatFind _ = mempty
+  namePatFind _ = mempty
+  swaps' _ _ = id
+  freshen' _ x = return (x, mempty)
+  lfreshen' _ x cont = cont x mempty
+  acompare' _ _ _ = EQ
+
+-- Substitutions ignore source positions
+instance Unbound.Subst b SourcePos where
+    subst _ _ = id
+    substs _ = id
+    substBvs _ _ = id
 
 -- | A type declaration (or type signature)
 data Sig = Sig {sigName :: TermName, sigType :: Type}

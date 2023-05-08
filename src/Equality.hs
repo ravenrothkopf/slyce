@@ -1,6 +1,6 @@
 module Equality
     ( equal
-    --, inferPi
+    , inferPi
     , whnf
     ) where
 
@@ -56,18 +56,15 @@ equal a b =
                 (_, body1) <- Unbound.unbind bnd1
                 (_, body2) <- Unbound.unbind bnd2
                 equal body1 body2
-            (_, _) -> error "terms are not equal" -- TODO: use Env.err
+            (_, _) -> err $ "terms are not equal:\n\t" ++ (show a') ++ "\n\t" ++ (show b') ++ "\n"
 
-
-
-inferPi :: Term -> TcMonad Type
-inferPi = whnf      -- used for returning the subcomponents of Pi types
--- TODO: add error checking
-{-
-case nf of
-    t@(Pi x y) -> t
-    _ -> error 
--}
+-- used for returning the subcomponents of Pi types
+inferPi :: Term -> TcMonad (Type, Unbound.Bind TermName Type)
+inferPi t = do
+    nf <- whnf t
+    case nf of
+        (Pi x y) -> return (x, y)
+        t -> err $ "expected Pi type, found: " ++ show t
 
 whnf :: Term -> TcMonad Term
 whnf v@(Var x) = do
@@ -76,13 +73,12 @@ whnf v@(Var x) = do
         Just def -> whnf def
         Nothing  -> return v
 whnf (Ann t _) = whnf t
+whnf (Pos _ t) = whnf t
 whnf (App a b) = do
     a' <- whnf a
     case a' of
         Lam bnd -> do                          -- beta reduction
-            (x,body) <- Unbound.unbind bnd
-            v <- whnf $ Unbound.subst x b body -- substitute b for x in body
-            return v
+            whnf $ Unbound.instantiate bnd [b] -- substitute b for x in body
         _       -> return $ App a' b           -- return App with normal form of a
 whnf (If a b c) = do
     a' <- whnf a

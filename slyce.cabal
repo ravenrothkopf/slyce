@@ -42,3 +42,5 @@ executable slyce
     DeriveAnyClass
     MultiParamTypeClasses
     DerivingStrategies
+    FlexibleInstances
+    GADTs

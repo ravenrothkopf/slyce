@@ -1,11 +1,13 @@
 module TypeCheck
     ( typeCheckModule
+    , typeCheckDef
     , inferType
     , checkType
     ) where
 
 import qualified Unbound.Generics.LocallyNameless as Unbound
 import qualified Control.Monad.Except as Ex
+import Debug.Trace (trace)
 import Context
 import Ast
 import qualified Equality as Equal
@@ -16,6 +18,8 @@ inferType term = typeCheckTerm term Nothing
 
 -- abstraction from `Term -> Type -> Ctx -> Bool`
 checkType :: Term -> Type -> TcMonad ()
+checkType term (Pos _ typ) = checkType term typ
+checkType term (Ann typ _) = checkType term typ
 checkType term typ = do
     term' <- Equal.whnf term
     typeCheckTerm term' (Just typ)
@@ -23,6 +27,8 @@ checkType term typ = do
 
 -- second argument is Nothing if used in inference mode
 typeCheckTerm :: Term -> Maybe Type -> TcMonad Type
+typeCheckTerm (Pos p term) mode = do
+    extendSourceLocation p term $ typeCheckTerm term mode
 -- inference mode
 typeCheckTerm (Var x)        Nothing = lookupType x >>= return . sigType
 typeCheckTerm UnitType       Nothing = return U
@@ -40,10 +46,11 @@ typeCheckTerm (Pi typA bnd)  Nothing = do
     return U
 typeCheckTerm (App a b)      Nothing = do
     t <- inferType a
-    (Pi typA bnd) <- Equal.whnf t
+    (typA, bnd) <- Equal.inferPi t
     checkType b typA
-    (x, typB) <- Unbound.unbind bnd
-    return $ Unbound.subst x typA typB
+    return $ Unbound.instantiate bnd [b]
+    --(x, typB) <- Unbound.unbind bnd
+    --return $ Unbound.subst x b typB
 typeCheckTerm (Ann term typ) Nothing = do 
     checkType term typ
     return typ
@@ -55,7 +62,8 @@ typeCheckTerm (If a b c)     Nothing = do
     t <- inferType b
     checkType c t
     return t
-typeCheckTerm (Lam bnd)      Nothing = undefined -- TODO: throw error
+typeCheckTerm (Lam bnd)      Nothing = do
+    err $ "cannot infer type of lambda"
 -- checking mode
 typeCheckTerm (If a b c)    (Just t) = do
     checkType a BoolType
@@ -72,7 +80,7 @@ typeCheckTerm (Pair a b)    (Just t) = do
     (x, typB) <- Unbound.unbind bnd
     checkType a typA
     extendCtxs [mkSig x typA, mkDef x a] (checkType b typB)
-    return t
+    return $ Sigma typA (Unbound.bind x typB)
 typeCheckTerm (LetPair rhs bnd) (Just t) = do
     pairType <- inferType rhs
     (Sigma typA bnd2) <- Equal.whnf pairType  -- `rhs` must be of Sigma type
@@ -96,7 +104,8 @@ typeCheckTerm (Lam bnd) (Just (Pi typA bnd2)) = do
     (x2, typB) <- Unbound.unbind bnd2   -- get typB
     extendCtx (mkSig x typA) (checkType body typB) -- add x:A to ctx
     return $ Pi typA bnd2
-typeCheckTerm (Lam _)      (Just nf) = undefined -- TODO: throw error
+typeCheckTerm t@(Lam _) (Just typ) = do
+    err $ "cannot check term <== type where term is " ++ show t ++ " and type is " ++ show typ
 typeCheckTerm term (Just typ) = do
     typ' <- inferType term
     Equal.equal typ typ'
@@ -109,9 +118,10 @@ runtc $ typeCheckTerm (Var ravenName) Nothing
 
 -}
 
--- TODO: function to type check a Decl, handle hints, context, etc
--- TODO: function to type check all Decls in a file/module
+-- TODO: see examples/pair.sly. this q cannot be called p. there is some name capture problem.
 
+-- | Type check a definiiton against its signature.
+--   If there is no signature, infer the type.
 typeCheckDef :: Decl -> TcMonad Type
 typeCheckDef (Def name term) = do
     h <- lookupHint name
@@ -119,11 +129,12 @@ typeCheckDef (Def name term) = do
         Nothing -> inferType term
             -- TODO: add these to ctx?
         Just s  -> do
+            traceMonad ("typehint for " ++ (show name) ++ " = " ++ (show term) ++ ": ") s
             checkType term (sigType s)
             return $ sigType s
-typeCheckDef _    = error "need a def"
+typeCheckDef _    = err $ "typeCheckDef requires a Def as input"
 
-typeCheckModule :: Module -> TcMonad [Type]
+typeCheckModule :: Module -> TcMonad [(TermName, Type)]
 typeCheckModule mod = do
     let decls = moduleDecls mod
 
@@ -143,10 +154,13 @@ typeCheckModule mod = do
         addCtx = extendCtxs ctx
         addHints = extendHints hints
 
+    traceMonad "ctx: " ctx
+    traceMonad "hints: " hints
+
     -- TcMonad [Type]
-    --liftM (zip ((\(Def n _) -> n) ctx)) $
-    addCtx $ addHints $ mapM typeCheckDef ctx
     -- go through each top level def
-    -- type check each one against its signature (if exists)
-    -- otherwise infer the type
-    -- print the type of each def
+    types <- addCtx $ addHints $ mapM typeCheckDef ctx
+    return $ zip (map (\(Def n _) -> n) ctx) types
+
+traceMonad :: (Show a, Monad m) => String -> a -> m a
+traceMonad s x = trace ("\t" ++ s ++ show x ++ "\n") (return x)
