@@ -1,14 +1,20 @@
-fst : (b:Bool,Bool) -> Bool
+fst : (Bool * Bool) -> Bool
 fst = \p . let (x,y) = p in x
 
-snd : (b:Bool,Bool) -> Bool
+snd : (Bool * Bool) -> Bool
 snd = \z . let (x,y) = z in y
 
-q : (b:Bool,Bool)
+flip : (Bool * Bool) -> (Bool * Bool)
+flip = \p . let (x,y) = p in (y,x)
+
+q : (Bool * Bool)
 q = (True, False)
 
-t : Bool
-t = fst q
+q' : (b:Bool * Bool)
+q' = flip q
+
+#t : Bool
+#t = fst q
 
 f : Bool
 f = snd q
