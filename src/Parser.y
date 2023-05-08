@@ -36,6 +36,7 @@ import Ast
   '||'      { TokenPos p TokenLineSep }
   ','       { TokenPos p TokenComma }
   '.'       { TokenPos p TokenDot }
+  '*'       { TokenPos p TokenStar }
   '('       { TokenPos p TokenLparen }
   ')'       { TokenPos p TokenRparen }
   '{'       { TokenPos p TokenLbrace }
@@ -71,7 +72,8 @@ typeSig            --> Sig
     : name ':' term  { Sig (snd $1) $3 }
 
 term                                   --> Term
-    : '\\' name '.' term                 { Pos (getPos $1) (Lam (Unbound.bind (snd $2) $4)) }
+    : '(' term ')'                       { Pos (getPos $1) $2 }
+    | '\\' name '.' term                 { Pos (getPos $1) (Lam (Unbound.bind (snd $2) $4)) }
     | '(' name ':' term ')' '->' term    { Pos (getPos $1) (Pi $4 (Unbound.bind (snd $2) $7)) }
     | term '->' term                     { Pos (getTermPos $1) (Pi $1 (Unbound.bind (Unbound.s2n "_") $3)) }
     | term term                          { Pos (getTermPos $1) (App $1 $2) }
@@ -83,7 +85,8 @@ term                                   --> Term
     | 'True'                             { Pos (getPos $1) (BoolLit True) }
     | 'False'                            { Pos (getPos $1) (BoolLit False) }
     | 'if' term 'then' term 'else' term  { Pos (getPos $1) (If $2 $4 $6) }
-    | '(' name ':' term ',' term ')'     { Pos (getPos $1) (Sigma $4 (Unbound.bind (snd $2) $6)) }
+    | '(' name ':' term '*' term ')'     { Pos (getPos $1) (Sigma $4 (Unbound.bind (snd $2) $6)) }
+    | '(' term '*' term ')'              { Pos (getPos $1) (Sigma $2 (Unbound.bind (Unbound.s2n "_") $4)) }
     | '(' term ',' term ')'              { Pos (getPos $1) (Pair $2 $4) }
     | 'let' '(' name ',' name ')' '=' term 'in' term { Pos (getPos $1) (LetPair $8 (Unbound.bind (snd $3, snd $5) $10)) }
     | 'let' name '=' term 'in' term      { Pos (getPos $1) (Let $4 (Unbound.bind (snd $2) $6)) }

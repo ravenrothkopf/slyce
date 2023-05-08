@@ -45,6 +45,7 @@ tokens :-
   \|                            { \p s -> TokenPos p TokenBar }
   "||"                          { \p s -> TokenPos p TokenLineSep }
   \.                            { \p s -> TokenPos p TokenDot }
+  \*                            { \p s -> TokenPos p TokenStar }
   \:                            { \p s -> TokenPos p TokenColon }
   \=                            { \p s -> TokenPos p TokenEq }
   \\                            { \p s -> TokenPos p TokenLam }
@@ -84,6 +85,7 @@ data Token = TokenLet
     | TokenLbracket
     | TokenRbracket
     | TokenDot
+    | TokenStar
     | TokenType
     | TokenTrue
     | TokenFalse
