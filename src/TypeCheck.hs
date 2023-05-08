@@ -21,8 +21,8 @@ checkType :: Term -> Type -> TcMonad ()
 checkType term (Pos _ typ) = checkType term typ
 checkType term (Ann typ _) = checkType term typ
 checkType term typ = do
-    term' <- Equal.whnf term
-    typeCheckTerm term' (Just typ)
+    typ' <- Equal.whnf typ
+    typeCheckTerm term (Just typ')
     return ()
 
 -- second argument is Nothing if used in inference mode
@@ -162,8 +162,9 @@ typeCheckModule mod = do
         addHint (TypeSig s) acc = s:acc
         addHint _ acc = acc
 
-        ctx   = (foldr addDef  [] decls :: [Decl])
+        defs  = (foldr addDef  [] decls :: [Decl])
         hints = (foldr addHint [] decls :: [Sig])
+        ctx   = defs ++ map TypeSig hints
 
         addCtx = extendCtxs ctx
         addHints = extendHints hints
@@ -173,7 +174,7 @@ typeCheckModule mod = do
 
     -- TcMonad [Type]
     -- go through each top level def
-    types <- addCtx $ addHints $ mapM typeCheckDef ctx
+    types <- addCtx $ addHints $ mapM typeCheckDef defs
     return $ zip (map (\(Def n _) -> n) ctx) types
 
 traceMonad :: (Show a, Monad m) => String -> a -> m a
