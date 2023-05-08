@@ -19,6 +19,7 @@ equal a b =
         a' <- whnf a
         b' <- whnf b
         case (a',b') of
+            (Var x, Var y) | x == y -> return ()
             (Lam bnd1, Lam bnd2) -> do
                 (_, body1) <- Unbound.unbind bnd1
                 (_, body2) <- Unbound.unbind bnd2
