@@ -59,7 +59,8 @@ typeCheckTerm (App a b)      Nothing = do
     --(x, typB) <- Unbound.unbind bnd
     --return $ Unbound.subst x b typB
 
-typeCheckTerm (Ann term typ) Nothing = do 
+typeCheckTerm (Ann term typ) Nothing = do
+    checkType typ U 
     checkType term typ
     return typ
 
