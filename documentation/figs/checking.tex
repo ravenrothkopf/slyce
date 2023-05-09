@@ -1,0 +1,34 @@
+%% slyce inference rules for bidirectional type system
+\begin{figure}[h!]
+    \[
+        \begin{bprooftree}
+            \AxiomC{$\Gamma, x:A\vdash a \Leftarrow B$}
+            \RightLabel{C-lambda}
+            \UnaryInfC{$\Gamma \vdash \lambda x . a \Leftarrow (x:A) \rightarrow B$}
+        \end{bprooftree}\qquad
+        \begin{bprooftree}
+            \AxiomC{$\Gamma\vdash a \Rightarrow A$}
+            \AxiomC{$\Gamma, x: A, x = a \vdash b \Leftarrow B$}
+            \RightLabel{C-let}
+            \BinaryInfC{$\Gamma \vdash \mathbf{let}\: x = a\: \mathbf{in}\:b \Leftarrow B$}
+        \end{bprooftree}
+    \]\newline
+    \[
+        \begin{bprooftree}
+            \AxiomC{\stackanchor{$\Gamma\vdash x \Leftarrow \mathbf{Bool}$}{
+                {$\Gamma, x = \mathbf{True}\vdash b_{1} \Leftarrow A$}
+                {$\:\:\:\:\:\:\:\Gamma, x = \mathbf{False}\vdash b_{2} \Leftarrow A$}
+            }}
+            \RightLabel{C-if}
+            \UnaryInfC{$\Gamma \vdash \mathbf{if}\: x\: \mathbf{then}\: b_{1}\: \mathbf{else} \: b_{2} \Leftarrow A $}
+        \end{bprooftree}
+    \]\newline
+    \[
+        \begin{bprooftree}
+            \AxiomC{$\Gamma\vdash z \Rightarrow (x : A_{1}\: * \:A_{2})$}
+            \AxiomC{$\Gamma, x: B_{1}, y:B_{2}, z = (x, y)\vdash b \Leftarrow B[(x, y)/z]$}
+            \RightLabel{C-letpair}
+            \BinaryInfC{$ \Gamma \vdash \mathbf{let}\: (x, y)\: = \: z \: \mathbf{in}\:b\Leftarrow B$}
+        \end{bprooftree}
+    \]
+\end{figure}

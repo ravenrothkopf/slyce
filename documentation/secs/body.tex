@@ -1,40 +1,16 @@
-\section{Project Overview}
-For our project, we implemented an interpreter for the dependently typed language \texttt{slyce}\footnotemark in Haskell.
-\texttt{slyce} is a pure language that features $\lambda$ abstractions, let-expressions, and if-then-else expressions.
-To implement \texttt{slyce}, we referenced tutorials for several dependently typed languages~\cite{friedman2018little, loh2010tutorial}, most notably Stephanie Weirich's \texttt{pi-forall} tutorial~\cite{weirich2022implementing}.
-
-\footnotetext{\texttt{slyce} is a reference to the phrase "slice of pie", because pie sounds like $\Pi$, as in the $\Pi$-calculus, which is the language of dependent types. However, since our project is a simple toy implementation, it is a "slice of $\Pi$". Moreover, the "y" in the name looks like an upside-down $\lambda$, evoking how our language differs from the $\lambda$-calculus.}
-
-\section{Installation}
-To run the type checker, first compile \texttt{slyce} using \texttt{stack build}. 
-Then, to run \texttt{slyce} on a source file, such as \texttt{hello.sly} located in the \texttt{/examples} subdirectory, execute the command\newline\centerline{\texttt{stack exec slyce -- -s -p -t ./examples/hello.sly}}\newline
-\texttt{-s} invokes the scanner for \texttt{slyce}, \texttt{-p} invokes the parser, and \texttt{-t} invokes the type checker. 
-If the file type checks, \texttt{slyce} will print the types of the variables and functions from the file to the terminal.
-Otherwise, the type checker will print an error message. 
+\input{secs/overview.tex}
+\input{secs/installation.tex}
 
 \section{Dependent Types}
 The key feature showcased in \texttt{slyce} is dependent type checking. 
-Dependent types, as 
 
 \section{Language Tutorial}
 \subsection{Hello World}
 \section{Syntax and Semantics}
-\section{Type System}
-The \texttt{slyce} type system makes use of \emph{bidirectional typing}. 
-A bidirectional type system splits up type rules into two categories of judgements: \emph{inference} judgements and \emph{checking} judgements.
-Type inference, $\Gamma\vdash a \Rightarrow A$\footnotemark, dictates that in the context $\Gamma$, we should infer that a term $a$ has type $A$.
-The inference rules for \texttt{slyce} are outlined below.
-In many rules, type inference depends on type checking.
-\input{figs/inference.tex}
-\footnotetext{We are following the style of Weirich's bidirectional type system: $\Rightarrow$ for type inference and $\Leftarrow$ for type checking. These can be swapped for $\uparrow$ and $\downarrow$ respectively when reffering to the bidirectional style outline in the lecture notes.}
 
+\input{secs/typesystem.tex}
 
+\input{secs/implementation.tex}
 
-\section{Haskell Implementation}
-%key points from all of the files
-\subsection{Ast.hs}
-\subsection{Context.hs}
-\subsection{TypeCheck.hs}
-\subsection{Equality.hs}
 \section{Discussion (questions, comments, lamentations, etc.)}
 

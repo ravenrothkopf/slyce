@@ -1,0 +1,18 @@
+\section{Type System}
+The \texttt{slyce} type system makes use of \emph{bidirectional typing}. 
+A bidirectional type system splits up type rules into two categories of judgements: \emph{inference} judgements and \emph{checking} judgements.
+\subsection{Type Inference: $\Gamma\vdash a \Rightarrow A$}
+Type inference, $\Gamma\vdash a \Rightarrow A$\footnotemark, dictates that in the context $\Gamma$, we should infer that a term $a$ has type $A$.
+The inference rules for \texttt{slyce} are outlined below.
+In many rules, type inference depends on type checking.
+
+\input{figs/inference.tex}
+
+Judgements I-app and I-let make use of \emph{definitional equality} to type check. The explanation and implementation of this property can be found in section~\ref{equal}.
+
+\subsection{Type Checking: $\Gamma\vdash a \Leftarrow A$}
+
+\input{figs/checking.tex}
+
+\footnotetext{We are following the style of Weirich's bidirectional type system: $\Rightarrow$ for type inference and $\Leftarrow$ for type checking. These can be swapped for $\uparrow$ and $\downarrow$ respectively when reffering to the bidirectional style outline in the lecture notes.}
+

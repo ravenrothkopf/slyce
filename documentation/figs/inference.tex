@@ -4,7 +4,7 @@
         \begin{bprooftree}
             \AxiomC{$x : A \in \Gamma$}
             \RightLabel{I-var}
-            \UnaryInfC{$\Gamma\vdash,x\Rightarrow A $}
+            \UnaryInfC{$\Gamma\vdash x\Rightarrow A $}
         \end{bprooftree}\qquad
         \begin{bprooftree}
             \AxiomC{$ $}
@@ -36,7 +36,7 @@
             \AxiomC{$\mathbf{whnf}\: A \rightsquigarrow (x: A_{1}) \rightarrow B$}
             \AxiomC{$\Gamma\vdash b \Leftarrow A_{1}$}
             \RightLabel{I-app}
-            \TrinaryInfC{$\Gamma\vdash a b \Rightarrow B[b/x]$}
+            \TrinaryInfC{$\Gamma\vdash a\: b \Rightarrow B[b/x]$}
         \end{bprooftree}
     \]
 \end{figure}
