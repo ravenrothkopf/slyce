@@ -4,7 +4,14 @@
 \usepackage{xspace}
 \usepackage{amssymb}
 \usepackage{bussproofs}
+\usepackage{stackengine}
+\usepackage{cite}
+\usepackage[square,numbers]{natbib}
 
 \AtBeginDocument{
   \providecommand\BibTeX{{
     Bib\TeX}}}
+
+\newenvironment{bprooftree}
+  {\leavevmode\hbox\bgroup}
+  {\DisplayProof\egroup}
