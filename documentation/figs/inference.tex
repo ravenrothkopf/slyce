@@ -1,0 +1,42 @@
+%% slyce inference rules for bidirectional type system
+\begin{figure}[h!]
+    \[
+        \begin{bprooftree}
+            \AxiomC{$x : A \in \Gamma$}
+            \RightLabel{I-var}
+            \UnaryInfC{$\Gamma\vdash,x\Rightarrow A $}
+        \end{bprooftree}\qquad
+        \begin{bprooftree}
+            \AxiomC{$ $}
+            \RightLabel{I-type}
+            \UnaryInfC{$\Gamma\vdash \mathbf{U}\Rightarrow \mathbf{U}$}
+        \end{bprooftree}\qquad
+        \begin{bprooftree}
+            \AxiomC{\stackanchor{$\Gamma\vdash A \Leftarrow \mathbf{U}$}{$\Gamma, x : A\vdash B \Leftarrow \mathbf{U}$}}
+            \RightLabel{I-Pi}
+            \UnaryInfC{$\Gamma\vdash (x : A) \rightarrow B \Rightarrow \mathbf{U}$}
+        \end{bprooftree}
+    \]\newline
+    \[
+        \begin{bprooftree}
+            \AxiomC{\stackanchor{$\Gamma\vdash A \Leftarrow \mathbf{U}$}{$\Gamma \vdash a \Leftarrow A$}}
+            \RightLabel{I-ann}
+            \UnaryInfC{$\Gamma\vdash (a : A) \Rightarrow A$}
+        \end{bprooftree}\qquad
+        \begin{bprooftree}
+            \AxiomC{$\Gamma\vdash a \Rightarrow A$}
+            \AxiomC{$\Gamma, x:A, x = a \vdash b \Rightarrow B$}
+            \RightLabel{I-let}
+            \BinaryInfC{$\Gamma\vdash \:\mathbf{let}\: x = a \:\mathbf{in}\: b \Rightarrow B[a/x]$}
+        \end{bprooftree}
+    \]\newline
+    \[
+        \begin{bprooftree}
+            \AxiomC{$\Gamma\vdash a \Rightarrow A$}
+            \AxiomC{$\mathbf{whnf}\: A \rightsquigarrow (x: A_{1}) \rightarrow B$}
+            \AxiomC{$\Gamma\vdash b \Leftarrow A_{1}$}
+            \RightLabel{I-app}
+            \TrinaryInfC{$\Gamma\vdash a b \Rightarrow B[b/x]$}
+        \end{bprooftree}
+    \]
+\end{figure}
