@@ -1,0 +1,10 @@
+#this should work after implementing dependent pattern matching?
+
+not : Bool -> Bool 
+not = \x. if x then False else True
+
+T : Bool -> U
+T = \b. if b then Unit else Bool
+
+bar : (b : Bool) -> T b
+bar = \b. if b then () else True

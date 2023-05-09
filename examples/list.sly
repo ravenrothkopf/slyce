@@ -1,5 +1,5 @@
-cons : [t1:U] -> [t2:U] -> t1 -> t2 -> (t1 * t2)
-cons = \[a]. \[b]. \l . \r . (l,r)
+cons : (t1:U) -> (t2:U) -> t1 -> t2 -> (t1 * t2)
+cons = \a. \b. \l . \r . (l,r)
 
 nil : Unit
 nil = ()
