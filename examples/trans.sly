@@ -1,0 +1,2 @@
+sym : (A:U) -> (x:A) -> (y:A) -> (x = y) -> y = x
+sym = \A. \x. \y. \pf.  subst Refl by pf

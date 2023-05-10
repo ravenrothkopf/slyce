@@ -5,4 +5,4 @@ zero : nat
 zero = \a. \x. \f. x
 
 succ : nat -> nat
-succ = \a. \x. \f. f (x a f)
+succ = \n. \a. \x. \f. f (n a x f)

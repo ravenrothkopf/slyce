@@ -5,4 +5,4 @@ nil : Unit
 nil = ()
 
 mylist : (Bool * (Bool * Unit))
-mylist = cons True (cons False nil)
+mylist = cons Bool (Bool * Unit) True (cons Bool Unit False nil)

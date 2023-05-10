@@ -6,5 +6,5 @@ not = \x. if x then False else True
 T : Bool -> U
 T = \b. if b then Unit else Bool
 
-bar : (b : Bool) -> T b
+bar : (y : Bool) -> T y
 bar = \b. if b then () else True

@@ -2,19 +2,19 @@ fst : (Bool * Bool) -> Bool
 fst = \p . let (x,y) = p in x
 
 snd : (Bool * Bool) -> Bool
-snd = \z . let (x,y) = z in y
+snd = \p . let (x,y) = p in y
 
 flip : (Bool * Bool) -> (Bool * Bool)
 flip = \p . let (x,y) = p in (y,x)
 
-q : (Bool * Bool)
-q = (True, False)
+p : (Bool * Bool)
+p = (True, False)
 
-q' : (b:Bool * Bool)
-q' = flip q
+p' : (b:Bool * Bool)
+p' = flip p
 
-#t : Bool
-#t = fst q
+t : Bool
+t = fst p
 
 f : Bool
-f = snd q
+f = snd p
