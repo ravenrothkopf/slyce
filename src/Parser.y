@@ -71,14 +71,19 @@ decls --> [Decl]
     | decl lines        { [$1] }
 
 decl --> Decl
-    : typeSig        { TypeSig $1 } 
-    | name '=' term  { Def (snd $1) $3 }
+    : typeSig                            { TypeSig $1 } 
+    | name '=' term                      { Def (snd $1) $3 }
+    | 'data' name decl 'where' blank     { Data (fst $2) [$3] }
 
 name --> (SourcePos, TermName)
     : VAR            { (getPos $1, Unbound.s2n (getVar . getToken $ $1)) }
 
 typeSig --> Sig
     : name ':' term  { Sig (snd $1) $3 }
+
+pattern
+    : --                    pattern        { Pos (getPos $1) (PatCon  [$2])}
+    | name                               { Pos (fst $1) (PatVar (snd $1))}
 
 term --> Term
     : '\\' name '.' term                 { Pos (getPos $1) (Lam (Unbound.bind (snd $2) $4)) }
@@ -94,6 +99,8 @@ term --> Term
     | '(' term ',' term ')'              { Pos (getPos $1) (Pair $2 $4) }
     | term '=' term                      { Pos (getTermPos $1) (EqType $1 $3) }
     | 'contra' term                      { Pos (getPos $1) (Contra $2) }
+    | 'case' term 'of' pattern term      { Pos (getPos $1) (Match $2 [Unbound.bind $4 $5]) }
+    -- | 'data' typeSig 'where' term        { Pos (getPos $1) (TCon $2) }
     | app                                { $1 }
     | atom                               { $1 }
 
