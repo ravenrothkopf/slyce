@@ -45,6 +45,8 @@ tokens :-
   subst                         { \p s -> TokenPos p TokenSubst } 
   by                            { \p s -> TokenPos p TokenBy } 
   "->"                          { \p s -> TokenPos p TokenArrow }
+  \>                            { \p s -> TokenPos p TokenGt }
+  \<                            { \p s -> TokenPos p TokenLt }
   \,                            { \p s -> TokenPos p TokenComma }
   \|                            { \p s -> TokenPos p TokenBar }
   "||"                          { \p s -> TokenPos p TokenLineSep }
@@ -99,6 +101,8 @@ data Token = TokenLet
     | TokenSubst
     | TokenBy
     | TokenContra
+    | TokenGt
+    | TokenLt
     deriving (Eq,Show)
 scanTokens = alexScanTokens
 

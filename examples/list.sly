@@ -1,8 +1,26 @@
-cons : (t1:U) -> (t2:U) -> t1 -> t2 -> (t1 * t2)
-cons = \a. \b. \l . \r . (l,r)
+cons : (t':U) -> (t:U) -> (x:t') -> (xs:t) -> (t' * t)
+cons = \t'. \t. \x. \xs. (x,xs)
+
+tcons : (t':U) -> (t:U) -> U
+tcons = \t'. \t. (t' * t)
 
 nil : Unit
 nil = ()
 
 mylist : (Bool * (Bool * Unit))
-mylist = cons Bool (Bool * Unit) True (cons Bool Unit False nil)
+mylist = cons Bool ((Bool * Unit)) True (cons Bool Unit False ())
+
+mylist2 =;
+  let t = Unit;
+   in;
+  let t' = tcons t t;
+   in;
+  let t'' = tcons t t';
+   in;
+  let t''' = tcons t t'';
+   in;
+  cons t t''' ();
+    (cons t t'' ();
+      (cons t t' ();
+        (cons t t ();
+          ())))

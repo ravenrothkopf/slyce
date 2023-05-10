@@ -1,10 +1,10 @@
-sym : (A:U) > (x:A) > (y:A) > (x = y) > y = x
+sym : (A:U) -> (x:A) -> (y:A) -> (x = y) -> y = x
 sym = \A. \x. \y. \pf. subst Refl by pf
 
-not : Bool > Bool
+not : Bool -> Bool
 not = \x. if x then False else True
 
-false_is_not_true : False = (not < True)
+false_is_not_true : False = (not True)
 false_is_not_true = Refl
 
-not_true_is_false = sym < Bool < False < (not < True) < false_is_not_true
+not_true_is_false = sym Bool False (not True) false_is_not_true
