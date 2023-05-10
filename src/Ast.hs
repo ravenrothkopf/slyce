@@ -16,6 +16,9 @@ instance Show SourcePos where
 
 type TermName = Unbound.Name Term
 
+type TCName = String
+type DCName = String
+
 type Type = Term
 
 data Term
@@ -41,12 +44,31 @@ data Term
   | Contra Term                             -- `contra` value that witnesses a contradictory type
   | EqType Term Term                        -- equality type `a = b`
   | Subst Term Term                         -- substitute one type for another, `subst t1 by t2`
+  | TCon TCName [Term]                      -- type constructor
+  | DCon DCName [Term]                      -- term/data constructor
+  | Match Term [Case]                       -- pattern matching a term over cases
   -- TODO:
   -- Type equality (Eq)
   -- Type Constructors (TCon)
   -- Term Constructors (DCon)
   -- case analysis (Match)
   deriving (Show, Generic)
+
+newtype Case = Case (Unbound.Bind Pattern Term)
+    deriving (Show, Generic, Typeable)
+    deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
+
+data Pattern = PatCon DCName [Pattern]
+             | PatVar TermName
+    deriving (Show, Eq, Generic, Typeable, Unbound.Alpha, Unbound.Subst Term)
+
+data ConstructorDef = ConstructorDef SourcePos DCName Telescope
+    deriving (Show, Generic)
+    deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
+
+newtype Telescope = Telescope [Decl]
+    deriving (Show, Generic)
+    deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
 
 instance Unbound.Subst Term Term where
   isvar (Var x) = Just (Unbound.SubstName x)
@@ -87,19 +109,18 @@ instance Unbound.Subst b SourcePos where
     substs _ = id
     substBvs _ _ = id
 
--- | A type declaration (or type signature)
+-- | A type declaration (or type signature).
 data Sig = Sig {sigName :: TermName, sigType :: Type}
   deriving (Show, Generic, Typeable, Unbound.Alpha, Unbound.Subst Term)
 
 data Decl
-  = -- | Declaration for the type of a term
-    TypeSig Sig
-  | -- | The definition of a particular name, must
-    -- already have a type declaration in scope
-    Def TermName Term
---  | -- | A potentially (recursive) definition of
-    -- a particular name, must be declared
-    --RecDef TermName Term
+    -- Type signatures appear in ctx after a definition is type checked.
+    = TypeSig Sig
+    -- Definitions are added to the context after being type checked.
+    | Def TermName Term
+    -- Data constructors are added to the context after being processed.
+    | Data TCName Telescope [ConstructorDef]
+--  | DataSig TCName
   deriving (Show, Generic, Typeable)
   deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
 

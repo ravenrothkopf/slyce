@@ -13,7 +13,9 @@ ppTerm (Lam bnd) =
      in "\\" ++ ppName x ++ "." ++ ppTerm body
 ppTerm (Pi typA bnd) =
     let (x,typB) = Unbound.runFreshM $ Unbound.unbind bnd
-     in "((" ++ ppName x ++ " : " ++ ppTerm typA ++ ") -> (" ++ ppTerm typB ++ "))"
+        x' = ppName x
+        var = if x' == "_" then "" else x' ++ " : "
+     in "(" ++ var ++ ppTerm typA ++ ") -> " ++ ppTerm typB ++ ""
 ppTerm (App a b) = "(" ++ ppTerm a ++ " " ++ ppTerm b ++ ")"
 ppTerm (Ann term typ) = "(" ++ ppTerm term ++ " : " ++ ppTerm typ ++ ")"
 ppTerm U = "U"
@@ -22,10 +24,12 @@ ppTerm UnitLit = "()"
 ppTerm BoolType = "Bool"
 ppTerm (BoolLit True) = "True"
 ppTerm (BoolLit False) = "False"
-ppTerm (If a b c) = "(if " ++ ppTerm a ++ " then " ++ ppTerm b ++ " else " ++ ppTerm c ++ ")"
+ppTerm (If a b c) = "if " ++ ppTerm a ++ " then " ++ ppTerm b ++ " else " ++ ppTerm c ++ ""
 ppTerm (Sigma typA bnd) =
     let (x,typB) = Unbound.runFreshM $ Unbound.unbind bnd
-     in "((" ++ ppName x ++ " : " ++ ppTerm typA ++ ") * (" ++ ppTerm typB ++ "))"
+        x' = ppName x
+        var = if x' == "_" then "" else x' ++ " : "
+     in "(" ++ var ++ ppTerm typA ++ " * " ++ ppTerm typB ++ ")"
 ppTerm (Pair a b) = "(" ++ ppTerm a ++ ", " ++ ppTerm b ++ ")"
 ppTerm (LetPair rhs bnd) =
     let ((x,y), body) = Unbound.runFreshM $ Unbound.unbind bnd
@@ -41,7 +45,10 @@ ppTerm (Subst a y) = "subst " ++ ppTerm a ++ " by " ++ ppTerm y
 
 ppDecl :: Decl -> String
 ppDecl (Def name term) = ppName name ++ " = " ++ ppTerm term
-ppDecl (TypeSig s) = ppName (sigName s) ++ " : " ++ ppTerm (sigType s)
+ppDecl (TypeSig s) = ppSig s
+
+ppSig :: Sig -> String
+ppSig s = ppName (sigName s) ++ " : " ++ ppTerm (sigType s)
 
 ppModule :: Module -> String
 ppModule = undefined

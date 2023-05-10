@@ -1,6 +1,6 @@
 module TypeCheck
     ( typeCheckModule
-    , typeCheckDef
+    , typeCheckDecl
     , inferType
     , checkType
     ) where
@@ -176,53 +176,61 @@ typeCheckTerm (Subst a y) (Just typ) = do
 
 typeCheckTerm term (Just typ) = do
     typ' <- inferType term
-    extendErr (Equal.equal typ typ') ("Inferred type:\n" ++ (show typ') ++ "\ndiffers from expected type:\n" ++ (show typ))
+    extendErr (Equal.equal typ typ') ("Inferred type:\n" ++ (ppTerm typ') ++ "\ndiffers from expected type:\n" ++ (ppTerm typ))
     return typ'
 
--- TODO: see examples/pair.sly. this q cannot be called p. there is some name capture problem.
+-- After processing a decl, either add something to the hints or to the context.
+data EnvItem = AddHint Sig | AddCtx [Decl]
 
--- | Type check a definiiton against its signature.
---   If there is no signature, infer the type.
-typeCheckDef :: Decl -> TcMonad Type
-typeCheckDef (Def name term) = do
+typeCheckDecl :: Decl -> TcMonad EnvItem
+-- Type check a definition against its signature.
+-- If there is no signature, infer the type.
+typeCheckDecl (Def name term) = do
     h <- lookupHint name
     case h of
-        Nothing -> inferType term
-            -- TODO: add these to ctx?
+        Nothing -> do
+            typ <- inferType term
+            return $ AddCtx [mkSig name typ, mkDef name term]
         Just s  -> do
-            traceMonad ("typehint for " ++ (show name) ++ " = " ++ (ppTerm term) ++ ": ") s
-            checkType (sigType s) U
-            checkType term (sigType s)
-            return $ sigType s
-typeCheckDef _    = err $ "typeCheckDef requires a Def as input"
+            --traceMonad ("typehint for " ++ (show name) ++ " = " ++ (ppTerm term) ++ ": ") s
 
-typeCheckModule :: Module -> TcMonad [(TermName, Type)]
+            -- No need to check sig. If sig is in hints, then it was already
+            -- checked by the function below.
+            extendCtx (TypeSig s) $ checkType term (sigType s)
+            return $ AddCtx [TypeSig s, mkDef name term]
+typeCheckDecl (TypeSig s) = do
+    checkType (sigType s) U
+    return $ AddHint s
+typeCheckDecl (Data tcon (Telescope args) dcons) = do
+    -- TODO: implement
+    return $ undefined
+
+typeCheckModule :: Module -> TcMonad [Sig]
 typeCheckModule mod = do
-    let decls = moduleDecls mod
+    let decls    = moduleDecls mod
+        --defs     = [d | d <- decls, (Def _ _) = d]
+        --hints    = [d | d <- decls, (TypeSig _) = d]
+        --datadefs = [d | d <- decls, (Data _) = d]
 
-        -- put all the defs into the ctx
-        addDef  :: Decl -> [Decl] -> [Decl]
-        addDef d@(Def _ _) acc = d:acc
-        addDef _ acc = acc
-
-        -- put all the sigs into the hints
-        addHint :: Decl -> [Sig] -> [Sig]
-        addHint (TypeSig s) acc = s:acc
-        addHint _ acc = acc
-
-        defs  = (foldr addDef  [] decls :: [Decl])
-        hints = (foldr addHint [] decls :: [Sig])
-        ctx   = defs ++ map TypeSig hints
-
-        addCtx = extendCtxs ctx
-        addHints = extendHints hints
+        --extendData 
 
     --traceMonad "ctx: " (map ppDecl ctx)
-    trace ("ctx:\n" ++ (intercalate "\n" (map ppDecl ctx))) (return ())
-    trace ("hints:\n" ++ (intercalate "\n" (map (ppDecl . TypeSig) hints))) (return ())
-    traceMonad "hints: " hints
+    --trace ("ctx:\n" ++ (intercalate "\n" (map ppDecl ctx))) (return ())
+    --trace ("hints:\n" ++ (intercalate "\n" (map (ppDecl . TypeSig) hints))) (return ())
+    --traceMonad "hints: " hints
 
-    -- TcMonad [Type]
-    -- go through each top level def
-    types <- addCtx $ addHints $ mapM typeCheckDef defs
-    return $ zip (map (\(Def n _) -> n) ctx) types
+    -- Go through each top level def and type check them one by one, extending
+    -- the environment as you go.
+    -- Build up a list of signatures to return, identifying the type of each
+    -- top level def.
+    foldr process (pure [] :: TcMonad [Sig]) decls
+        where
+            process :: Decl -> TcMonad [Sig] -> TcMonad [Sig]
+            process d sigs = do
+                action <- typeCheckDecl d
+                case action of
+                    AddHint sig  -> do
+                        extendHints [sig] sigs
+                    AddCtx decls -> do
+                        -- When a term has been type checked, add its signature
+                        (++[s | TypeSig s <- decls]) <$> extendCtxs decls sigs

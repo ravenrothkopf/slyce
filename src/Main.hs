@@ -19,14 +19,14 @@ readInput :: String -> IO String
 readInput "-" = getContents
 readInput filename = readFile filename
 
-typeCheckProgram :: Module -> IO [(TermName, Type)]
+typeCheckProgram :: Module -> IO [Sig]
 typeCheckProgram mod = do
     res <- runTcMonad $ typeCheckModule mod
     case res of
         Left typeError -> do
             print typeError
             exitFailure
-        Right types -> return types
+        Right sigs -> return sigs
 
 data Flag = Scan | Parse | CheckTypes | Verbose
     deriving (Show, Eq)
@@ -63,8 +63,8 @@ main = do
     when (Parse `elem` opts) $ do
         print mod
 
-    types <- typeCheckProgram mod
+    sigs <- typeCheckProgram mod
     when (CheckTypes `elem` opts) $ do
-        mapM_ (\(n,t) -> putStrLn $ ppName n ++ " : " ++ ppTerm t) types
+        mapM_ (putStrLn . ppSig) sigs
 
     exitSuccess
