@@ -24,6 +24,7 @@ data Term
   | Pi Type (Unbound.Bind TermName Type)    -- function type `(x : A) -> B`
   | App Term Term                           -- application `a b`
   | Ann Term Type                           -- annotated terms `(a : A)`
+  | Pos SourcePos Term                      -- source position information (line and column #)
   | U                                       -- the type of types `U`
   | UnitType                                -- Unit type
   | UnitLit                                 -- sole inhabitant of Unit, `()`
@@ -36,18 +37,26 @@ data Term
   | LetPair Term (Unbound.Bind (TermName, TermName) Term) -- destructor for Sigma types
   -- `let x = a in b`   ->   LetPair a (bind x b)
   | Let Term (Unbound.Bind TermName Term)   -- convenience
-  | Pos SourcePos Term
+  | Refl                                    -- `refl` value
+  | Contra Term                             -- `contra` value that witnesses a contradictory type
+  | EqType Term Term                        -- equality type `a = b`
+  | Subst Term Term                         -- substitute one type for another, `subst t1 by t2`
   -- TODO:
   -- Type equality (Eq)
   -- Type Constructors (TCon)
   -- Term Constructors (DCon)
   -- case analysis (Match)
-  deriving (Show, Generic, Unbound.Subst Term)
+  deriving (Show, Generic)
+
+instance Unbound.Subst Term Term where
+  isvar (Var x) = Just (Unbound.SubstName x)
+  isvar _ = Nothing
 
 getTermPos :: Term -> SourcePos
-getTermPos (App a _) = getTermPos a
-getTermPos (Pi a _) = getTermPos a
 getTermPos (Pos p _) = p
+--getTermPos (App a _) = getTermPos a
+--getTermPos (Pi a _) = getTermPos a
+--getTermPos (Ann a _) = getTermPos a
 getTermPos t       = error $ "cannot get posn of " ++ show t
 
 -- Ignore Pos and Ann for equivalence checking

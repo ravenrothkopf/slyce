@@ -40,6 +40,10 @@ tokens :-
   Bool                          { \p s -> TokenPos p TokenBool }
   True                          { \p s -> TokenPos p TokenTrue }
   False                         { \p s -> TokenPos p TokenFalse }
+  Refl                          { \p s -> TokenPos p TokenRefl } 
+  contra                        { \p s -> TokenPos p TokenContra } 
+  subst                         { \p s -> TokenPos p TokenSubst } 
+  by                            { \p s -> TokenPos p TokenBy } 
   "->"                          { \p s -> TokenPos p TokenArrow }
   \,                            { \p s -> TokenPos p TokenComma }
   \|                            { \p s -> TokenPos p TokenBar }
@@ -91,6 +95,10 @@ data Token = TokenLet
     | TokenFalse
     | TokenBool
     | TokenUnit
+    | TokenRefl
+    | TokenSubst
+    | TokenBy
+    | TokenContra
     deriving (Eq,Show)
 scanTokens = alexScanTokens
 

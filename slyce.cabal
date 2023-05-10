@@ -20,7 +20,8 @@ executable slyce
     Equality,
     TypeCheck,
     Parser,
-    Scanner
+    Scanner,
+    PrettyPrint
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,

@@ -27,6 +27,10 @@ import Ast
   'True'    { TokenPos p TokenTrue }
   'False'   { TokenPos p TokenFalse }
   'Unit'    { TokenPos p TokenUnit }
+  'subst'   { TokenPos p TokenSubst }
+  'by'      { TokenPos p TokenBy }
+  'Refl'    { TokenPos p TokenRefl }
+  'contra'  { TokenPos p TokenContra }
   '\\'      { TokenPos p TokenLam }
   '='       { TokenPos p TokenEq }
   '->'      { TokenPos p TokenArrow }
@@ -45,6 +49,7 @@ import Ast
   ']'       { TokenPos p TokenRbracket }
   VAR       { TokenPos p (TokenVar s) }
 
+%right '->'
 %nonassoc NOELSE 'else'
 
 %%
@@ -90,6 +95,10 @@ term                                   --> Term
     | '(' term ',' term ')'              { Pos (getPos $1) (Pair $2 $4) }
     | 'let' '(' name ',' name ')' '=' term 'in' term { Pos (getPos $1) (LetPair $8 (Unbound.bind (snd $3, snd $5) $10)) }
     | 'let' name '=' term 'in' term      { Pos (getPos $1) (Let $4 (Unbound.bind (snd $2) $6)) }
+    | 'subst' term 'by' term             { Pos (getPos $1) (Subst $2 $4) }
+    | 'Refl'                             { Pos (getPos $1) Refl }
+    | 'contra' term                      { Pos (getPos $1) (Contra $2) }
+    | term '=' term                      { Pos (getTermPos $1) (EqType $1 $3) }
     | name                               { Pos (fst $1) (Var (snd $1)) }
 
 {

@@ -8,14 +8,19 @@ module Context
     , extendCtx
     , extendCtxs
     , extendHints
+    , extendErr
     , extendSourceLocation
+    , getSourceLocation
+    , getContext
     , warn
     , err
+    , traceMonad
     )
     where
 
 --import PrettyPrint (D (..), Disp (..), Doc, SourcePos, render)
 import Unbound.Generics.LocallyNameless as Unbound
+import Debug.Trace (trace)
 import Control.Monad.Except
   ( ExceptT,
     MonadError (..),
@@ -48,6 +53,9 @@ runTcMonad m = runExceptT $ runReaderT (Unbound.runFreshMT m) emptyEnv
 
 data SourceLocation where
     SourceLocation :: SourcePos -> Term -> SourceLocation
+
+instance Show SourceLocation where
+    show (SourceLocation p t) = show p ++ show t
 
 data Err = Err [SourceLocation] String
 
@@ -136,6 +144,12 @@ extendSourceLocation :: SourcePos -> Term -> TcMonad a -> TcMonad a
 extendSourceLocation pos term =
   local (\e@Env{getLoc = locs} -> e{getLoc = SourceLocation pos term : locs})
 
+getSourceLocation :: TcMonad [SourceLocation]
+getSourceLocation = asks getLoc
+
+getContext :: TcMonad [Decl]
+getContext = asks getCtx
+
 -- | Throw an error
 err :: String -> TcMonad b
 err d = do
@@ -147,3 +161,6 @@ warn :: (Show a) => a -> TcMonad ()
 warn e = do
     loc <- asks getLoc
     liftIO $ putStrLn $ "warning: " ++ (show $ Err loc (show e))
+
+traceMonad :: (Show a, Monad m) => String -> a -> m a
+traceMonad s x = trace ("\t" ++ s ++ show x ++ "\n") (return x)

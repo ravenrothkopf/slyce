@@ -10,6 +10,7 @@ import Control.Monad (unless, when)
 import Ast
 import Context
 import TypeCheck
+import PrettyPrint
 
 import Parser (parse)
 import Scanner (scanTokens)
@@ -64,6 +65,6 @@ main = do
 
     types <- typeCheckProgram mod
     when (CheckTypes `elem` opts) $ do
-        mapM_ print types
+        mapM_ (\(n,t) -> putStrLn $ ppName n ++ " : " ++ ppTerm t) types
 
     exitSuccess
