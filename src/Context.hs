@@ -41,6 +41,8 @@ import Data.List (intercalate)
 
 import Ast
 
+import PrettyPrint
+
 ---------------------------------
 
 -- Type Checking Monad
@@ -62,7 +64,7 @@ data Err = Err [SourceLocation] String
 instance Show Err where
     show (Err [] msg) = msg-- ++ "\nin the expression:\nPosition Unknown"
     show (Err ((SourceLocation p term) : _) msg) =
-        show p ++ msg ++ "\nin the expression:\n" ++ show term
+        show p ++ msg ++ "\nin the expression:\n" ++ show term ++ "\n" ++ ppTerm term
 
 instance Semigroup Err where
   (Err src1 d1) <> (Err src2 d2) = Err (src1 ++ src2) (d1 `mappend` d2)
