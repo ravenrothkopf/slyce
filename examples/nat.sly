@@ -1,0 +1,20 @@
+data Nat where
+    Zero,
+    Succ of (Nat).
+
+zero = Zero.
+one = Succ zero.
+two = Succ one.
+three = Succ two.
+
+isZero : Nat -> Bool.
+isZero = \n. match n with Zero -> True | Succ m -> False.
+
+pred : Nat -> Nat.
+pred = \n. match n with Succ m -> m.
+
+min : Nat -> Nat -> Nat.
+min = \n. \m.
+    if isZero n then n
+    else if isZero m then m
+    else Succ (min (pred n) (pred m)).
