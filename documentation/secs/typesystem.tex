@@ -1,6 +1,8 @@
 \section{Bidirectional type system}
 The \texttt{slyce} type system makes use of \emph{bidirectional typing}. 
 A bidirectional type system splits up type rules into two categories of judgements: \emph{inference} judgements and \emph{checking} judgements.
+The following rules serve as a sketch for \texttt{slyce}'s core bidirectional type system, though they notably do not include rules for checking data constructors, equality types, and case expressions.
+To get a sense for these typing rules, please refer to~\cite{weirich2022implementing}.
 \subsection{Type Inference: $\Gamma\vdash a \Rightarrow A$}
 Type inference, $\Gamma\vdash a \Rightarrow A$\footnotemark, dictates that in the context $\Gamma$, we should infer that a term $a$ has type $A$.
 The inference rules for \texttt{slyce} are outlined below.
@@ -8,11 +10,15 @@ In many rules, type inference depends on type checking.
 
 \input{figs/inference.tex}
 
-Judgements I-app and I-let make use of \emph{definitional equality} to type check. The explanation and implementation of this property can be found in section~\ref{equal}.
+Judgements I-app and I-let make use of \emph{definitional equality} to perform type inference. 
+The explanation and implementation of this property can be found in section~\ref{equal}.
 
 \subsection{Type Checking: $\Gamma\vdash a \Leftarrow A$}
-
+Type checking, $\Gamma\vdash a \Leftarrow A$, makes use of information from the context $\Gamma$, like the types of top-level definitions, to look up the type of $a$ and check that it matches the known type $A$.
+The checking rules for \texttt{slyce} are outlined below.
 \input{figs/checking.tex}
 
-\footnotetext{We are following the style of Weirich's bidirectional type system: $\Rightarrow$ for type inference and $\Leftarrow$ for type checking. These can be swapped for $\uparrow$ and $\downarrow$ respectively when reffering to the bidirectional style outline in the lecture notes.}
+Judgements C-let, C-letpair and C-if make use of \emph{definitional equality} and \emph{propositional equality} to type check. 
+The explanation and implementation of these properties can be found in Sections~\ref{equal} and~\ref{flow}.
+\footnotetext{We are following the style of Weirich's bidirectional type system: $\Rightarrow$ for type inference and $\Leftarrow$ for type checking. These can be swapped for $\uparrow$ and $\downarrow$ respectively when referring to the bidirectional style outline in the lecture notes.}
 
