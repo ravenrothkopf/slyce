@@ -134,8 +134,8 @@ typeCheckTerm (If a b c)    (Just t) = do
     --  if a is `Var x`, then add `x = True` or `x = False` to respective branches
     a' <- Equal.whnf a
 
-    loc <- head <$> getSourceLocation
-    traceMonad ("a' = " ++ (show a') ++ "\naka " ++ ppTerm a' ++ " at " ++ show loc ++ "\n") ()
+    --loc <- head <$> getSourceLocation
+    --traceMonad ("a' = " ++ (show a') ++ "\naka " ++ ppTerm a' ++ " at " ++ show loc ++ "\n") ()
 
     let defBool (Var x) b = [mkDef x (BoolLit b)]
         defBool _ _       = []
@@ -468,4 +468,4 @@ typeCheckModule modu = do
                         extendHints [sig] sigs
                     AddCtx decls -> do
                         -- When a term has been type checked, add its signature
-                        (++[s | TypeSig s <- decls]) <$> extendCtxs decls sigs
+                        ([s | TypeSig s <- decls]++) <$> extendCtxs decls sigs

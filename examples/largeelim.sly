@@ -1,10 +1,8 @@
-#this should work after implementing dependent pattern matching?
+not : Bool -> Bool .
+not = \x. if x then False else True.
 
-not : Bool -> Bool 
-not = \x. if x then False else True
+t : Bool -> U.
+t = \b. if b then Unit else Bool.
 
-T : Bool -> U
-T = \b. if b then Unit else Bool
-
-bar : (y : Bool) -> T y
-bar = \b. if b then () else True
+bar : (y : Bool) -> t y.
+bar = \b. if b then () else True.

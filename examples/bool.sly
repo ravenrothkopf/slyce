@@ -1,0 +1,8 @@
+or : Bool -> Bool -> Bool.
+or = \p. \q. if p then p else q.
+
+and : Bool -> Bool -> Bool.
+and = \p. \q. if p then q else p.
+
+not : Bool -> Bool.
+not = \p. if p then False else True.

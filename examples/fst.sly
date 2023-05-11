@@ -1,5 +1,5 @@
-fst : (a:U) -> (b:U) -> (a * b) -> a
-fst = \a. \b. \p. let (x,_) = p in x
+fst : (a:U) -> (b:U) -> (a * b) -> a.
+fst = \a. \b. \p. let (x,y) = p in x.
 
 # x = fst Bool Bool (False, True)
-x = fst Bool Bool ((False, True))
+x = fst Bool Bool ((False, True)).

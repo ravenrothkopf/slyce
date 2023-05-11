@@ -1,26 +1,35 @@
-cons : (t':U) -> (t:U) -> (x:t') -> (xs:t) -> (t' * t)
-cons = \t'. \t. \x. \xs. (x,xs)
+or : Bool -> Bool -> Bool.
+or = \p. \q. if p then p else q.
 
-tcons : (t':U) -> (t:U) -> U
-tcons = \t'. \t. (t' * t)
+and : Bool -> Bool -> Bool.
+and = \p. \q. if p then q else p.
 
-nil : Unit
-nil = ()
+not : Bool -> Bool.
+not = \p. if p then False else True.
 
-mylist : (Bool * (Bool * Unit))
-mylist = cons Bool ((Bool * Unit)) True (cons Bool Unit False ())
+##########################
+#      list library
+##########################
 
-mylist2 =;
-  let t = Unit;
-   in;
-  let t' = tcons t t;
-   in;
-  let t'' = tcons t t';
-   in;
-  let t''' = tcons t t'';
-   in;
-  cons t t''' ();
-    (cons t t'' ();
-      (cons t t' ();
-        (cons t t ();
-          ())))
+
+data List (t:U) where
+    Nil,
+    Cons of (x:t) (xs:List t).
+
+map : (a:U) -> (b:U) -> (a -> b) -> List a -> List b.
+map = \a. \b. \f. \l.
+    match l with
+        | Nil -> Nil
+        | Cons x xs -> Cons (f x) (map a b f xs).
+
+foldr : (a:U) -> (b:U) -> (a -> b -> b) -> b -> List a -> b.
+foldr = \a. \b. \f. \acc. \l.
+    match l with
+      | Nil -> acc
+      | Cons x xs -> f x (foldr a b f acc xs).
+
+any : List Bool -> Bool.
+any = foldr Bool Bool or False.
+
+all : List Bool -> Bool.
+all = foldr Bool Bool and True.

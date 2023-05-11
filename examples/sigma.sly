@@ -1,7 +1,7 @@
 #strong sigma types - should type check with dep. pattern matching
 
-fst : (a:U) -> (b : a -> U) -> (p : ( x2 : a * b x2 )) -> a
-fst = \a. \b. \p. let (x,y) = p in x
+fst : (a:U) -> (b : a -> U) -> (p : ( x2 : a * b x2 )) -> a.
+fst = \a. \b. \p. let (x,y) = p in x.
 
-snd : (a:U) -> (b : a -> U) -> (p : ( x2 : a * b x2 )) -> b (fst a b p)
-snd = \a. \b. \p. let (x1,y) = p in y
+snd : (a:U) -> (b : a -> U) -> (p : ( x2 : a * b x2 )) -> b (fst a b p).
+snd = \a. \b. \p. let (x1,y) = p in y.

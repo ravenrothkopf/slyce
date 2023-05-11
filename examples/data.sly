@@ -6,8 +6,6 @@ data List (t:U) where
     Nil,
     Cons of (x:t) (xs:List t).
 
-#l : List (Bool').
-#l = Cons (True') (Cons (False') (Nil)).
 l : List Bool'.
 l = Cons True' (Cons False' Nil).
 
@@ -34,3 +32,4 @@ map = \a. \b. \f. \l.
         | Cons x xs -> Cons (f x) (map a b f xs).
 
 l' = map (Bool') (Bool') not l.
+

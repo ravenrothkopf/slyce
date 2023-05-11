@@ -1,5 +1,5 @@
-mytype : U
-mytype = Bool -> Bool
+mytype : U.
+mytype = Bool -> Bool.
 
-not : mytype
-not = \b . if b then False else True
+not : mytype.
+not = \b . if b then False else True.

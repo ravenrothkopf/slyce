@@ -16,7 +16,7 @@ import Ast
 $digit = 0-9
 $alpha = [a-zA-Z]
 $eol   = [\n]
-@idlower = [a-z] [a-zA-Z0-9_\']*
+@idlower = [a-z_] [a-zA-Z0-9_\']*
 @idupper = [A-Z] [a-zA-Z0-9_\']*
 $whitespace = [\ \t]
 

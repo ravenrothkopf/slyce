@@ -173,7 +173,7 @@ term --> Term
     | conApp                             { $1 }
     | funApp                             { $1 }
     | '(' term ')'                       { Pos (getPos $1) $2 }
-    | variable                               { Pos (fst $1) (Var (snd $1)) }
+    | variable                           { Pos (fst $1) (Var (snd $1)) }
     | conName %prec CON                  { Pos (fst $1) (Con (snd $1) []) }
     | 'U'                                { Pos (getPos $1) U }
     | 'Unit'                             { Pos (getPos $1) UnitType }
@@ -210,7 +210,7 @@ funApp --> Term
 
 atom --> Term
     : '(' term ')'                       { Pos (getPos $1) $2 }
-    | variable                               { Pos (fst $1) (Var (snd $1)) }
+    | variable                           { Pos (fst $1) (Var (snd $1)) }
     | conName %prec CON                  { Pos (fst $1) (Con (snd $1) []) }
     | 'U'                                { Pos (getPos $1) U }
     | 'Unit'                             { Pos (getPos $1) UnitType }

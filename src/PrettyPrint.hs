@@ -42,7 +42,7 @@ ppTerm Refl = "Refl"
 ppTerm (Contra a) = "contra " ++ ppTerm a
 ppTerm (EqType a b) = ppTerm a ++ " = " ++ ppTerm b
 ppTerm (Subst a y) = "subst " ++ ppTerm a ++ " by " ++ ppTerm y
-ppTerm (Con n args) = n ++ concatMap ((' ':). ppTerm) args
+ppTerm (Con n args) = "(" ++ n ++ concatMap ((' ':). ppTerm) args ++ ")"
 ppTerm (Match scrut cases) = "match " ++ ppTerm scrut ++ " with " ++
     concatMap (\c -> "\n  | " ++ ppCase c) cases
 

@@ -118,20 +118,20 @@ whnf (Ann t _) = whnf t
 whnf (Pos _ t) = whnf t
 whnf (App a b) = do
     a' <- whnf a
-    traceMonad ("in whnf App: a' = " ++ show a') ()
-    traceMonad ("in whnf App: b = " ++ show b) ()
-    b' <- whnf b
-    traceMonad ("in whnf App: b' = " ++ show b') ()
-    c <- getContext 
-    traceMonad (concat $ map ((++"\n"). show) c) ()
+    --traceMonad ("in whnf App: a' = " ++ show a') ()
+    --traceMonad ("in whnf App: b = " ++ show b) ()
+    --b' <- whnf b
+    --traceMonad ("in whnf App: b' = " ++ show b') ()
+    --c <- getContext 
+    --traceMonad (concat $ map ((++"\n"). show) c) ()
     case a' of
         Lam bnd -> do                          -- beta reduction
             whnf $ Unbound.instantiate bnd [b] -- substitute b for x in body
         _       -> return $ App a' b           -- return App with normal form of a
 whnf (If a b c) = do
-    traceMonad ("in whnf If: a = " ++ show a) ()
+    --traceMonad ("in whnf If: a = " ++ show a) ()
     a' <- whnf a
-    traceMonad ("in whnf If: a' = " ++ show a') ()
+    --traceMonad ("in whnf If: a' = " ++ show a') ()
     case a' of
         BoolLit True  -> whnf b
         BoolLit False -> whnf c

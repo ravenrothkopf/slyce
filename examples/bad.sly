@@ -1,0 +1,15 @@
+# This file must fail.
+x : Bool.
+x = y.
+
+y : Bool.
+y = x.
+
+not : Bool -> Bool.
+not = \x. if x then False else True.
+
+absurd : U.
+absurd = (a : U) -> a.
+
+id : absurd.
+id = \z. z.

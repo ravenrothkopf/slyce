@@ -1,0 +1,5 @@
+#isType : (t:U) -> (t':U) -> t = t'
+#isType = \t. \t'. subst Refl by
+
+#isUnit : (t:U) -> (pf : (t = Bool)) -> pf.
+#isUnit = \t. \pf. Refl.
