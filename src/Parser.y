@@ -4,12 +4,20 @@ module Parser
   , parse
   ) where
 
+import Control.Monad.State.Strict ( State
+                                , evalState
+                                , get
+                                , modify
+                                )
 import qualified Unbound.Generics.LocallyNameless as Unbound
+import qualified Data.Set as Set
+import Debug.Trace (trace)
 import Scanner
 import Ast
 }
 
 %name parse
+%monad { State ConstructorNames } 
 %error { parseError }
 %tokentype { TokenPos }
 
@@ -49,7 +57,8 @@ import Ast
   '}'       { TokenPos p TokenRbrace }
   '['       { TokenPos p TokenLbracket }
   ']'       { TokenPos p TokenRbracket }
-  VAR       { TokenPos p (TokenVar s) }
+  idLower   { TokenPos p (TokenIdLower s) }
+  idUpper   { TokenPos p (TokenIdUpper s) }
 
 %right '->'
 %right '>'
@@ -58,59 +67,110 @@ import Ast
 
 %%
 program --> Module
-    : decls          { Module $1 }
-    | lines decls    { Module $2 }
-    | {- empty -}    { Module [] }
-
-lines --> ()
-    : '||' lines     { () }
-    | {- empty -}    { () }
+    : decls          { Module (reverse $1) }
 
 decls --> [Decl]
-    : decl lines decls  { $1 : $3 }
-    | decl lines        { [$1] }
+    : decls '.' decl  { $3 : $1 }
+    | decls '.'       { $1 }
+    | decl            { [$1] }
+    | {- empty -}     { [] }
 
 decl --> Decl
-    : typeSig                            { TypeSig $1 } 
-    | name '=' term                      { Def (snd $1) $3 }
-    --| 'data' name decl 'where' blank     { Data (fst $2) [$3] }
+    : typeSig           { TypeSig $1 } 
+    | variable '=' term     { Def (snd $1) $3 }
+    | 'data' conName telescope 'where' constructors
+      {% addTC (snd $2) >> return (Data (snd $2) (Telescope (reverse $3)) (reverse $5)) }
 
-name --> (SourcePos, TermName)
-    : VAR            { (getPos $1, Unbound.s2n (getVar . getToken $ $1)) }
+-- variables are lower case
+variable --> (SourcePos, TermName)
+    : idLower
+    { let x = (getVar $ getToken $1)
+        in (getPos $1, Unbound.s2n x) }
+
+-- constructors are upper case
+conName --> (SourcePos, String)
+    : idUpper
+    { let x = (getVar $ getToken $1)
+        in (getPos $1, x) }
 
 typeSig --> Sig
-    : name ':' term  { Sig (snd $1) $3 }
+    : variable ':' term  { Sig (snd $1) $3 }
+
+-- zero or more
+telescope --> [Decl]
+    : telescope '(' teleDecl ')'  { $3:$1 }
+    | {- empty -}                 { [] }
+
+-- Only typeSigs and defs allowed. Names are optional for typeSigs.
+-- TODO: state
+teleDecl --> Decl
+    : typeSig             { TypeSig $1 }
+    | variable '=' term   { Def (snd $1) $3 }
+    | term                { TypeSig (Sig (Unbound.s2n "_") $1) }
+
+-- zero or more
+constructors --> [ConstructorDef]
+    : constructors ',' constructor  { $3:$1 }
+    | constructors ','              { $1 }
+    | constructor                   { [$1] }
+    | {- empty -}                   { [] }
+
+-- TODO: make sure this works with recursive data definitions
+constructor --> ConstructorDef
+    : conName
+    {% addDC (snd $1) >> return (ConstructorDef (fst $1) (snd $1) (Telescope [])) }
+    | conName 'of' telescope
+    {% addDC (snd $1) >> return (ConstructorDef (fst $1) (snd $1) (Telescope (reverse $3))) } 
 
 {-pattern
     : --                    pattern        { Pos (getPos $1) (PatCon  [$2])}
-    | name                               { Pos (fst $1) (PatVar (snd $1))}
+    | variable                               { Pos (fst $1) (PatVar (snd $1))}
     -}
 
 term --> Term
-    : '\\' name '.' term                 { Pos (getPos $1) (Lam (Unbound.bind (snd $2) $4)) }
-    | '(' name ':' term '*' term ')'     { Pos (getPos $1) (Sigma $4 (Unbound.bind (snd $2) $6)) }
+    : '\\' variable '.' term                 { Pos (getPos $1) (Lam (Unbound.bind (snd $2) $4)) }
+    | '(' variable ':' term '*' term ')'     { Pos (getPos $1) (Sigma $4 (Unbound.bind (snd $2) $6)) }
     | '(' term '*' term ')'              { Pos (getPos $1) (Sigma $2 (Unbound.bind (Unbound.s2n "_") $4)) }
-    | '(' name ':' term ')' '->' term    { Pos (getPos $1) (Pi $4 (Unbound.bind (snd $2) $7)) }
+    | '(' variable ':' term ')' '->' term    { Pos (getPos $1) (Pi $4 (Unbound.bind (snd $2) $7)) }
     | term '->' term                     { Pos (getTermPos $1) (Pi $1 (Unbound.bind (Unbound.s2n "_") $3)) }
     | '(' term ':' term ')'              { Pos (getPos $1) (Ann $2 $4) }
     | 'if' term 'then' term 'else' term  { Pos (getPos $1) (If $2 $4 $6) }
-    | 'let' '(' name ',' name ')' '=' term 'in' term { Pos (getPos $1) (LetPair $8 (Unbound.bind (snd $3, snd $5) $10)) }
-    | 'let' name '=' term 'in' term      { Pos (getPos $1) (Let $4 (Unbound.bind (snd $2) $6)) }
+    | 'let' '(' variable ',' variable ')' '=' term 'in' term
+                                         { Pos (getPos $1) (LetPair $8 (Unbound.bind (snd $3, snd $5) $10)) }
+    | 'let' variable '=' term 'in' term      { Pos (getPos $1) (Let $4 (Unbound.bind (snd $2) $6)) }
     | 'subst' term 'by' term             { Pos (getPos $1) (Subst $2 $4) }
     | '(' term ',' term ')'              { Pos (getPos $1) (Pair $2 $4) }
     | term '=' term                      { Pos (getTermPos $1) (EqType $1 $3) }
     | 'contra' term                      { Pos (getPos $1) (Contra $2) }
-    --| 'case' term 'of' pattern term      { Pos (getPos $1) (Match $2 [Unbound.bind $4 $5]) }
-    -- | 'data' typeSig 'where' term        { Pos (getPos $1) (TCon $2) }
+  --| 'case' term 'of' pattern term      { Pos (getPos $1) (Match $2 [Unbound.bind $4 $5]) }
     | app                                { $1 }
     | atom                               { $1 }
 
 app --> Term
+    : conApp                             { $1 }
+    | funApp                             { $1 }
+
+conApp --> Term
+    : conName args
+    {% get >>= \s ->
+       let n = snd $1 
+           res = \t -> Pos (fst $1) (t n (reverse $2))
+       in if n `Set.member` (tconNames s)
+          then return $ res TCon
+          else if n `Set.member` (dconNames s)
+               then return $ res DCon
+               else parseError [TokenPos (AlexPn 0 0 0) (TokenIdUpper (show (fst $1)))] }
+
+args --> [Term]
+    : args term     { $2:$1 }
+    | {- empty -}   { [] }
+
+funApp --> Term
     : term atom                          { Pos (getTermPos $1) (App $1 $2) }
 
 atom --> Term
     : '(' term ')'                       { Pos (getPos $1) $2 }
-    | name                               { Pos (fst $1) (Var (snd $1)) }
+    | variable                               { Pos (fst $1) (Var (snd $1)) }
     | 'U'                                { Pos (getPos $1) U }
     | 'Unit'                             { Pos (getPos $1) UnitType }
     | '(' ')'                            { Pos (getPos $1) UnitLit }
@@ -120,14 +180,21 @@ atom --> Term
     | 'Refl'                             { Pos (getPos $1) Refl }
 
 {
+addTC :: TCName -> State ConstructorNames ()
+addTC n = modify (\cs -> cs{tconNames = Set.insert n (tconNames cs)})
+
+addDC :: DCName -> State ConstructorNames ()
+addDC n = modify (\cs -> cs{dconNames = Set.insert n (dconNames cs)})
+
 parseError :: [TokenPos] -> a
 parseError (p@(TokenPos _ t):_) = error $ show (getPos p) ++ "Parse error at token " ++ show t
 parseError [] = error $ "Parse error with no tokens"
 
 parseProgram :: String -> Module
-parseProgram = parse . scanTokens
+parseProgram s = evalState (parse $ scanTokens s) emptyConstructorNames
 
 getVar :: Token -> String
-getVar (TokenVar s) = s
+getVar (TokenIdUpper s) = s
+getVar (TokenIdLower s) = s
 getVar _ = error "not a var"
 }

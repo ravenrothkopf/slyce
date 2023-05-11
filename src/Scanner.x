@@ -5,6 +5,7 @@ module Scanner
     , scanTokens
     , getPos
     , getToken
+    , AlexPosn(..)
     ) where
 
 import Ast
@@ -15,12 +16,14 @@ import Ast
 $digit = 0-9
 $alpha = [a-zA-Z]
 $eol   = [\n]
-@identifier = [a-zA-Z_] [a-zA-Z0-9_\']*
+@idlower = [a-z_] [a-zA-Z0-9_\']*
+@idupper = [A-Z] [a-zA-Z0-9_\']*
 $whitespace = [\ \t]
 
 tokens :-
-  $eol+                         { \p s -> TokenPos p TokenLineSep }
-  \;$eol+                       ;
+  --$eol+                         { \p s -> TokenPos p TokenLineSep }
+  --\;$eol+                       ;
+  $eol+                         ;
   \;                            ;
   $whitespace+                  ;
   "#".*                         ;
@@ -61,7 +64,8 @@ tokens :-
   \}                            { \p s -> TokenPos p TokenRbrace }
   \[                            { \p s -> TokenPos p TokenLbracket }
   \]                            { \p s -> TokenPos p TokenRbracket }
-  @identifier                   { \p s -> TokenPos p (TokenVar s) }
+  @idlower                      { \p s -> TokenPos p (TokenIdLower s) }
+  @idupper                      { \p s -> TokenPos p (TokenIdUpper s) }
 {
 data TokenPos = TokenPos AlexPosn Token
     deriving (Eq, Show)
@@ -76,7 +80,8 @@ data Token = TokenLet
     | TokenData
     | TokenOf
     | TokenNum Int
-    | TokenVar String
+    | TokenIdLower String
+    | TokenIdUpper String
     | TokenEq 
     | TokenLam
     | TokenArrow 

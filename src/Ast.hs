@@ -4,6 +4,8 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic, from)
 import qualified Unbound.Generics.LocallyNameless as Unbound
 import Data.Function (on)
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 ---------------------------------
 
@@ -18,6 +20,17 @@ type TermName = Unbound.Name Term
 
 type TCName = String
 type DCName = String
+
+-- This is used in the parser to collect constructor names as they are defined,
+-- in order to distinguish TCon and DCon from function application.
+data ConstructorNames = ConstructorNames
+  { tconNames :: Set String,
+    dconNames :: Set String
+  } deriving (Show, Eq, Ord, Generic, Typeable)
+
+emptyConstructorNames :: ConstructorNames
+emptyConstructorNames = ConstructorNames Set.empty Set.empty
+-- TODO: add built-in data types
 
 type Type = Term
 

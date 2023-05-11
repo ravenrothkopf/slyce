@@ -225,10 +225,10 @@ err d = do
     throwError $ Err loc d
 
 -- | Print a warning
-warn :: (Show a) => a -> TcMonad ()
+warn :: String -> TcMonad ()
 warn e = do
     loc <- asks getLoc
-    liftIO $ putStrLn $ "warning: " ++ (show $ Err loc (show e))
+    liftIO $ putStrLn $ "warning: " ++ (show $ Err loc e)
 
 traceMonad :: (Show a, Monad m) => String -> a -> m a
 traceMonad s x = trace ("\t" ++ s ++ show x ++ "\n") (return x)

@@ -27,7 +27,8 @@ executable slyce
     base >= 4.7 && < 5,
     unbound-generics >= 0.4.3,
     mtl >= 2.2.1,
-    array >= 0.5.4.0
+    array >= 0.5.4.0,
+    containers
   build-tools:         happy, alex
   ghc-options:         -Wall
                        -Wcompat

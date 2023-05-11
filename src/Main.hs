@@ -6,6 +6,7 @@ import System.Exit (exitFailure, exitSuccess)
 import System.Console.GetOpt
 
 import Control.Monad (unless, when)
+import Control.Monad.State.Strict (evalState)
 
 import Ast
 import Context
@@ -59,7 +60,7 @@ main = do
     when (Scan `elem` opts) $ do
         mapM_ print tokens
 
-    let mod = parse tokens
+    let mod = flip evalState emptyConstructorNames . parse $ tokens
     when (Parse `elem` opts) $ do
         print mod
 
