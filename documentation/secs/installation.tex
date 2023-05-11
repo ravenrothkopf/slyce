@@ -1,0 +1,6 @@
+\section{Installation}
+ To run the type checker, first compile \texttt{slyce} using \texttt{stack build}. 
+ Then, to run \texttt{slyce} on a source file, such as \texttt{hello.sly} located in the \texttt{/examples} subdirectory, execute the command\newline\centerline{\texttt{stack exec slyce -- -s -p -t ./examples/hello.sly}}\newline
+ \texttt{-s} invokes the scanner for \texttt{slyce}, \texttt{-p} invokes the parser, and \texttt{-t} invokes the type checker. 
+ If the file type checks, \texttt{slyce} will print the types of the variables and functions from the file to the terminal.
+ Otherwise, the type checker will print an error message. 
