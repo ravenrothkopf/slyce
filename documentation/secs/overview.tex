@@ -1,6 +1,10 @@
 \section{Project Overview}
 For our project, we implemented an interpreter for the dependently typed language \texttt{slyce}\footnotemark in Haskell.
-\texttt{slyce} is a pure language that features $\lambda$ abstractions, let-expressions, and if-then-else expressions.
+\texttt{slyce} is a pure language that features $\lambda$ abstractions, let-expressions, if-then-else expressions, abstract data types, and pattern matching.
+In addition to user defined abstract data types, the language  comes with several built in data types: namely \texttt{Unit}, \texttt{Bool}, and \texttt{Pair}.
+\texttt{slyce} is also equipped with a parser and exhaustive error checking for program debugging.  
 To implement \texttt{slyce}, we referenced tutorials for several dependently typed languages~\cite{friedman2018little, loh2010tutorial}, most notably Stephanie Weirich's \texttt{pi-forall} tutorial~\cite{weirich2022implementing}.
 
+We came into this project knowing absolutely nothing about dependent types, and we have certainly learned a lot throughout this journey.
+While some mysteries of dependent type checking still remain (covered in Section~\ref{reflection}), we have come away from this project with a deep understanding of much of Weirich's implementation and a core intuition about her decisions.
 \footnotetext{\texttt{slyce} is a reference to the phrase "slice of pie", because pie sounds like $\Pi$, as in the $\Pi$-calculus, which is the language of dependent types. However, since our project is a simple toy implementation, it is a "slice of $\Pi$". Moreover, the "y" in the name looks like an upside-down $\lambda$, evoking how our language differs from the $\lambda$-calculus.}
