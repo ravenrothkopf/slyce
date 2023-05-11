@@ -2,6 +2,7 @@
 To give a taste for \texttt{slyce}, we first walk through a set of example programs that can be found in the \texttt{/examples} subdirectory of the \texttt{slyce} source code.
 These examples provide a concrete reference for \texttt{slyce}'s key features discussed throughout the rest of this report.
 \subsection{\texttt{vec.sly}: The \texttt{slyce} Hello World program}
+\begin{figure}[h!]
 \begin{lstlisting}
     data Nat where
         Zero,
@@ -24,7 +25,10 @@ These examples provide a concrete reference for \texttt{slyce}'s key features di
     v : Vec Nat three.
     v = Cons two one (Cons one two (Cons zero three Nil)).
 \end{lstlisting}
+\end{figure}
+
 \subsection{\texttt{largeelim.sly}: Dependent pattern matching/propositional equality}
+\begin{figure}[h!]
 \begin{lstlisting}
     not : Bool -> Bool .
     not = \x. if x then False else True.
@@ -35,7 +39,9 @@ These examples provide a concrete reference for \texttt{slyce}'s key features di
     bar : (y : Bool) -> t y.
     bar = \b. if b then () else True.    
 \end{lstlisting}
+\end{figure}
 \subsection{\texttt{sym.sly}: Definitional equality}
+\begin{figure}[h!]
 \begin{lstlisting}
     sym : (a:U) -> (x:a) -> (y:a) -> (x = y) -> y = x.
     sym = \a. \x. \y. \pf. subst Refl by pf.
@@ -48,3 +54,4 @@ These examples provide a concrete reference for \texttt{slyce}'s key features di
 
     not_true_is_false = sym Bool False (not True) false_is_not_true.
 \end{lstlisting}
+\end{figure}

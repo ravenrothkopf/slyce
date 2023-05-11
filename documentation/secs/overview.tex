@@ -5,6 +5,12 @@ In addition to user defined abstract data types, the language  comes with severa
 \texttt{slyce} is also equipped with a parser and exhaustive error checking for program debugging.  
 To implement \texttt{slyce}, we referenced tutorials for several dependently typed languages~\cite{friedman2018little, loh2010tutorial}, most notably Stephanie Weirich's \texttt{pi-forall} tutorial~\cite{weirich2022implementing}.
 
+Weirich's tutorial consists of 9 chapters, 8 of which we implemented in full. 
+The only exception is \texttt{pi-forall}'s irrelevancy checking.
+Irrelevance is a feature that comes from the notion that with dependent types, components like type annotations and type arguments are only there for proofs and can be ignored during compilation.
+Polymorphic functions must behave the same regardless of the types they are operating on, so they do not depend on types.
+We skipped this section for the sake of time and with the comfort that the feature is an optimization, thus not critical to the core functionality of the type checker.
+
 We came into this project knowing absolutely nothing about dependent types, and we have certainly learned a lot throughout this journey.
 While some mysteries of dependent type checking still remain (covered in Section~\ref{reflection}), we have come away from this project with a deep understanding of much of Weirich's implementation and a core intuition about her decisions.
 \footnotetext{\texttt{slyce} is a reference to the phrase "slice of pie", because pie sounds like $\Pi$, as in the $\Pi$-calculus, which is the language of dependent types. However, since our project is a simple toy implementation, it is a "slice of $\Pi$". Moreover, the "y" in the name looks like an upside-down $\lambda$, evoking how our language differs from the $\lambda$-calculus.}
