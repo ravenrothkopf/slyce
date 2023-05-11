@@ -21,8 +21,8 @@ readInput "-" = getContents
 readInput filename = readFile filename
 
 typeCheckProgram :: Module -> IO [Sig]
-typeCheckProgram mod = do
-    res <- runTcMonad $ typeCheckModule mod
+typeCheckProgram modu = do
+    res <- runTcMonad $ typeCheckModule modu
     case res of
         Left typeError -> do
             print typeError
@@ -60,11 +60,11 @@ main = do
     when (Scan `elem` opts) $ do
         mapM_ print tokens
 
-    let mod = flip evalState emptyConstructorNames . parse $ tokens
+    let modu = flip evalState emptyConstructorNames . parse $ tokens
     when (Parse `elem` opts) $ do
-        print mod
+        print modu
 
-    sigs <- typeCheckProgram mod
+    sigs <- typeCheckProgram modu
     when (CheckTypes `elem` opts) $ do
         mapM_ (putStrLn . ppSig) sigs
 

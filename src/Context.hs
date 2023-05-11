@@ -2,9 +2,11 @@ module Context
     ( runTcMonad
     , TcMonad
     , Env(..)
+    , WhichCon(..)
     , lookupType
     , lookupDef
     , lookupHint
+    , lookupWhichCon
     , lookupDConAll
     , lookupDCon
     , lookupTCon
@@ -24,6 +26,7 @@ module Context
 
 --import PrettyPrint (D (..), Disp (..), Doc, SourcePos, render)
 import Unbound.Generics.LocallyNameless as Unbound
+import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Control.Monad.Except
   ( ExceptT,
@@ -92,13 +95,15 @@ data Env = Env
     -- has been checked.
     getHints :: [Sig],
     -- | what part of the file we are in (for errors/warnings)
-    getLoc :: [SourceLocation]
+    getLoc :: [SourceLocation],
+    getCNames :: ConstructorNames
   }
 
 emptyEnv :: Env
 emptyEnv = Env { getCtx   = []
                , getHints = []
                , getLoc   = []
+               , getCNames = emptyConstructorNames
                }
 
 ---------------------------------
@@ -143,7 +148,7 @@ lookupDConAll dcname = do
                       Nothing -> scanCtx ctx
                       Just c -> do
                           more <- scanCtx ctx
-                          return $ (dcname, (tele, c)) : more
+                          return $ (t', (tele, c)) : more
               scanCtx (_:ctx) = scanCtx ctx
 
 -- | Return the data constructor definition (type param telescope and
@@ -177,6 +182,15 @@ lookupTCon tcname = do
                   then return (tele, Nothing)
                   else scanCtx ctx
               scanCtx (_:ctx) = scanCtx ctx
+
+data WhichCon = TCon | DCon
+lookupWhichCon :: String -> TcMonad WhichCon
+lookupWhichCon name = do
+    cnames <- asks getCNames
+    let f | name `Set.member` (tconNames cnames) = return TCon
+          | name `Set.member` (dconNames cnames) = return DCon
+          | otherwise = err $ "Constructor not found: " ++ name
+    f
 
 ---------------------------------
 -- | Extension functions

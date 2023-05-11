@@ -16,7 +16,7 @@ import Ast
 $digit = 0-9
 $alpha = [a-zA-Z]
 $eol   = [\n]
-@idlower = [a-z_] [a-zA-Z0-9_\']*
+@idlower = [a-z] [a-zA-Z0-9_\']*
 @idupper = [A-Z] [a-zA-Z0-9_\']*
 $whitespace = [\ \t]
 
@@ -35,6 +35,8 @@ tokens :-
   let                           { \p s -> TokenPos p TokenLet }
   in                            { \p s -> TokenPos p TokenIn }
   where                         { \p s -> TokenPos p TokenWhere }
+  match                         { \p s -> TokenPos p TokenMatch }
+  with                          { \p s -> TokenPos p TokenWith }
   if                            { \p s -> TokenPos p TokenIf }
   then                          { \p s -> TokenPos p TokenThen }
   else                          { \p s -> TokenPos p TokenElse }
@@ -54,6 +56,7 @@ tokens :-
   \|                            { \p s -> TokenPos p TokenBar }
   "||"                          { \p s -> TokenPos p TokenLineSep }
   \.                            { \p s -> TokenPos p TokenDot }
+  \_                            { \p s -> TokenPos p TokenUnderscore }
   \*                            { \p s -> TokenPos p TokenStar }
   \:                            { \p s -> TokenPos p TokenColon }
   \=                            { \p s -> TokenPos p TokenEq }
@@ -74,6 +77,8 @@ data Token = TokenLet
     | TokenLineSep
     | TokenIn
     | TokenWhere
+    | TokenMatch
+    | TokenWith
     | TokenIf
     | TokenThen
     | TokenElse
@@ -108,6 +113,7 @@ data Token = TokenLet
     | TokenContra
     | TokenGt
     | TokenLt
+    | TokenUnderscore
     deriving (Eq,Show)
 scanTokens = alexScanTokens
 

@@ -8,6 +8,7 @@ module TypeCheck
 import qualified Unbound.Generics.LocallyNameless as Unbound
 import Unbound.Generics.LocallyNameless.Unsafe (unsafeUnbind)
 import qualified Control.Monad.Except as Ex
+import Control.Monad.Reader (MonadReader (local))
 import Control.Monad (unless)
 import Debug.Trace (trace)
 import Context
@@ -89,36 +90,41 @@ typeCheckTerm (EqType a b) Nothing = do
     checkType b typA
     return U
 
-typeCheckTerm (DCon dcname terms) Nothing = do
-    -- Get data constructor definition from the context.
-    tcons <- lookupDConAll dcname
-    case tcons of
-        -- We use pattern matching to accomplish two things:
-        --   Check for ambiguity: inferred DCon's can only have one associated TCon.
-        --   Ensure this is not a parameterized type, since these cannot be inferred.
-        [(tcname, (Telescope [], ConstructorDef _ _ (Telescope tele)))] -> do
-            let nArgs = length [d | d@(TypeSig _) <- tele]
-            unless (nArgs == length terms) $
-                err $ "Constructor " ++ dcname ++ " should have " ++ show nArgs ++
-                    " data arguments, but was given " ++ show (length terms) ++ " arguments."
-            -- Check actual args against DCon telescope.
-            typeCheckTeleArgs terms tele
-            return $ TCon tcname []
-        [_] -> do
-            err $ "Cannot infer parameters to type constructors in data constructor: " ++ dcname
-        _ -> do
-            err $ "Ambiguous data constructor: " ++ dcname
-
-typeCheckTerm (TCon tcname params) Nothing = do
-    -- This uses the same judgment as DCon, but the implementation details differ.
-    (Telescope tele, _) <- lookupTCon tcname
-    -- Ensure actuals match telescope.
-    unless (length tele == length params) $
-        err $ "Type constructor " ++ tcname ++ " should have " ++ show (length tele) ++
-            " data arguments, but was given " ++ show (length params) ++ " arguments."
-    -- Check that params have the correct types against the telescope.
-    typeCheckTeleArgs params tele
-    return U
+typeCheckTerm (Con name terms) Nothing = do
+    res <- lookupWhichCon name
+    case res of
+        TCon -> do
+            let tcname = name
+                params = terms
+            -- This uses the same judgment as DCon, but the implementation details differ.
+            (Telescope tele, _) <- lookupTCon tcname
+            -- Ensure actuals match telescope.
+            unless (length tele == length params) $
+                err $ "Type constructor " ++ tcname ++ " should have " ++ show (length tele) ++
+                    " data arguments, but was given " ++ show (length params) ++ " arguments."
+            -- Check that params have the correct types against the telescope.
+            typeCheckTeleArgs params tele
+            return U
+        DCon -> do
+            let dcname = name
+            -- Get data constructor definition from the context.
+            tcons <- lookupDConAll dcname
+            case tcons of
+                -- We use pattern matching to accomplish two things:
+                --   Check for ambiguity: inferred DCon's can only have one associated TCon.
+                --   Ensure this is not a parameterized type, since these cannot be inferred.
+                [(tcname, (Telescope [], ConstructorDef _ _ (Telescope tele)))] -> do
+                    let nArgs = length [d | d@(TypeSig _) <- tele]
+                    unless (nArgs == length terms) $
+                        err $ "Constructor " ++ dcname ++ " should have " ++ show nArgs ++
+                            " data arguments, but was given " ++ show (length terms) ++ " arguments."
+                    -- Check actual args against DCon telescope.
+                    typeCheckTeleArgs terms tele
+                    return $ Con tcname []
+                [_] -> do
+                    err $ "Cannot infer parameters to type constructors in data constructor: " ++ dcname
+                _ -> do
+                    err $ "Ambiguous data constructor: " ++ dcname
 
 -- checking mode
 
@@ -233,7 +239,7 @@ typeCheckTerm (Match scrut cases) (Just typ) = do
             -- Add variables in pattern to context. These include type
             -- signatures of variables, as well as equality constraints on
             -- variables.
-            decls <- declarePat pat (TCon tcname params)
+            decls <- declarePat pat (Con tcname params)
             -- TODO: what the fuck
             -- TODO: what are these
             decls' <- Equal.unify [] scrut' (pat2Term pat)
@@ -249,7 +255,9 @@ typeCheckTerm (Match scrut cases) (Just typ) = do
 
     return typ
 
-typeCheckTerm (DCon dcname args) (Just typ@(TCon tcname params)) = do
+typeCheckTerm (Con dcname args) (Just typ@(Con tcname params)) = do
+    DCon <- lookupWhichCon dcname
+    TCon <- lookupWhichCon tcname
     -- ^^Use pattern matching to ensure type to check against is a TCon.
 
     -- Look up the DCon definition.
@@ -359,7 +367,7 @@ substTypeParamsInTele ttele params dtele = do
 -- | Convert a pattern to a term 
 pat2Term :: Pattern -> Term
 pat2Term (PatVar x) = Var x
-pat2Term (PatCon dc pats) = DCon dc (map pat2Term pats) 
+pat2Term (PatCon dc pats) = Con dc (map pat2Term pats) 
 
 -- | Create Decls from a pattern of a given type.
 declarePat :: Pattern -> Type -> TcMonad [Decl]
@@ -431,8 +439,8 @@ typeCheckDecl (Data tcname (Telescope ttele) constructors) = do
 typeCheckDecl (DataSig _ _) = err $ "internal construct"
 
 typeCheckModule :: Module -> TcMonad [Sig]
-typeCheckModule mod = do
-    let decls    = moduleDecls mod
+typeCheckModule modu = do
+    let decls    = moduleDecls modu
         --defs     = [d | d <- decls, (Def _ _) = d]
         --hints    = [d | d <- decls, (TypeSig _) = d]
         --datadefs = [d | d <- decls, (Data _) = d]
@@ -448,7 +456,9 @@ typeCheckModule mod = do
     -- the environment as you go.
     -- Build up a list of signatures to return, identifying the type of each
     -- top level def.
-    foldr process (pure [] :: TcMonad [Sig]) decls
+    let extendCNames = local (\e -> e{getCNames = moduleConstructorNames modu})
+
+    extendCNames $ foldr process (pure [] :: TcMonad [Sig]) decls
         where
             process :: Decl -> TcMonad [Sig] -> TcMonad [Sig]
             process d sigs = do

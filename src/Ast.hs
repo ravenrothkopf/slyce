@@ -57,8 +57,9 @@ data Term
   | Contra Term                             -- `contra` value that witnesses a contradictory type
   | EqType Term Term                        -- equality type `a = b`
   | Subst Term Term                         -- substitute one type for another, `subst t1 by t2`
-  | TCon TCName [Term]                      -- type constructor application
-  | DCon DCName [Term]                      -- term/data constructor application
+--  | TCon TCName [Term]                      -- type constructor application
+--  | DCon DCName [Term]                      -- term/data constructor application
+  | Con String [Term]
   | Match Term [Case]                       -- pattern matching a term over cases
   deriving (Show, Generic)
 
@@ -143,6 +144,7 @@ mkDef x term = Def x term
 data Module = Module
   { --moduleName :: MName,
     --moduleImports :: [ModuleImport],
-    moduleDecls :: [Decl]
+    moduleDecls :: [Decl],
+    moduleConstructorNames :: ConstructorNames
   }
   deriving (Show, Generic, Typeable)

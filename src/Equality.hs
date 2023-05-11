@@ -67,10 +67,10 @@ equal a b =
                 equal rhs1 rhs2
                 Just (_, body1, _, body2) <- Unbound.unbind2 bnd1 bnd2
                 equal body1 body2
-            (TCon c1 a1, TCon c2 a2) | c1 == c2 -> do
+            (Con c1 a1, Con c2 a2) | c1 == c2 -> do
                 zipWithM_ equal a1 a2
-            (DCon c1 a1, DCon c2 a2) | c1 == c2 -> do
-                zipWithM_ equal a1 a2
+--            (DCon c1 a1, DCon c2 a2) | c1 == c2 -> do
+--                zipWithM_ equal a1 a2
             (Match s1 cs1, Match s2 cs2) | length cs1 == length cs2 -> do
                 equal s1 s2
                 let equalCase (Case bnd1) (Case bnd2) = do
@@ -101,7 +101,9 @@ ensureTCon :: Term -> TcMonad (TCName, [Term])
 ensureTCon t = do
     t' <- whnf t
     case t' of
-        TCon name params -> return (name, params)
+        Con name params -> do
+            TCon <- lookupWhichCon name
+            return (name, params)
         _ -> err $ "Expected a data type but found " ++ show t'
 
 ----------------------------
@@ -152,14 +154,16 @@ whnf (Subst a y) = do
 whnf (Match scrut cases) = do
     scrut' <- whnf scrut
     case scrut' of
-        (DCon dcname args) -> f cases where
-          f (Case bnd : alts) = (do
-              (pat, body) <- Unbound.unbind bnd
-              defs <- patternMatches scrut' pat
-              whnf (Unbound.substs defs body))
-                `catchError` \ _ -> f alts
-          f [] = err $ "Internal error: couldn't find a matching branch for " ++
-                 show scrut' ++ " in " ++ show cases
+        (Con dcname args) -> do
+            DCon <- lookupWhichCon dcname
+            f cases where
+              f (Case bnd : alts) = (do
+                  (pat, body) <- Unbound.unbind bnd
+                  defs <- patternMatches scrut' pat
+                  whnf (Unbound.substs defs body))
+                    `catchError` \ _ -> f alts
+              f [] = err $ "Internal error: couldn't find a matching branch for " ++
+                     show scrut' ++ " in " ++ show cases
         _ -> return (Match scrut' cases)
 
 whnf term      = return term                   -- all types and lambda
@@ -172,10 +176,13 @@ patternMatches term (PatVar x) = return [(x, term)]
 patternMatches term pat = do
   t' <- whnf term
   case (t', pat) of
-      (DCon d [], PatCon d' pats)   | d == d' -> return []
-      (DCon d args, PatCon d' pats) | d == d' ->
+      (Con d [], PatCon d' pats)   | d == d' -> (
+          lookupWhichCon d >>= \DCon -> return () >>
+          return [])
+      (Con d args, PatCon d' pats) | d == d' -> (
+          lookupWhichCon d >>= \DCon -> return () >>
           -- TODO: does this work?
-         concat <$> zipWithM patternMatches args pats
+         concat <$> zipWithM patternMatches args pats)
       _ -> err $ "arg " ++ show t' ++ " doesn't match pattern " ++ show pat
 
 -----------------------
@@ -194,10 +201,10 @@ unify ns tx ty = do
       (yty, Var y) | y `notElem` ns -> return [Def y yty]
       (Pair a1 a2, Pair b1 b2) -> unifyArgs [a1, a2] [b1, b2]
       (EqType a1 a2, EqType b1 b2) -> unifyArgs [a1, a2] [b1, b2]
-      (TCon s1 tms1, TCon s2 tms2)
+      (Con s1 tms1, Con s2 tms2)
         | s1 == s2 -> unifyArgs tms1 tms2
-      (DCon s1 a1s, DCon s2 a2s)
-        | s1 == s2 -> unifyArgs a1s a2s
+--      (DCon s1 a1s, DCon s2 a2s)
+--        | s1 == s2 -> unifyArgs a1s a2s
       (Lam bnd1, Lam bnd2) -> do
         (x, b1, _, b2) <- Unbound.unbind2Plus bnd1 bnd2
         unify (x:ns) b1 b2
