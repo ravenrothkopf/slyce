@@ -1,0 +1,19 @@
+\section{Our approach}
+Our implementation process for \texttt{slyce} was iterative, and consisted of four main components when tackling any given feature.
+\begin{enumerate}
+    \item Read \texttt{pi-forall}'s documentation on the specific feature we sought to implement
+    \item Attempt to implement the feature while referencing the documentation
+    \item Check our approach with Weirich's source code
+    \item Test our additions and debug (alot)
+\end{enumerate}
+
+Following the style of the \texttt{pi-forall} tutorial, we began with a simple, core language without any bells and whistles.
+Our first iterations of \texttt{slyce} were without error messages or a parser.
+Thus, step \textbf{5} of the implementation process was primitive in the at first. 
+We began with simply loading our modules into Haskell's \texttt{ghci} environment and testing from there.
+As we progressed farther in the tutorial and type checking features built in complexity, we added these tools.
+This process ensured that we deeply understood the foundation of our type checker before we began to add new, more involved features. 
+
+The core theories behind dependent type checking in \texttt{slyce} largely mirror that of \texttt{pi-forall}.
+Weirich's tutorial covers the theory and leaves all the other features that must come with a dependent type checker up to interpretation.
+For that reason, we diverge the most from \texttt{pi-forall} in our parser and error checking approaches, though upon reflection in Section~\ref{reflection}, we wish we had implemented our parser in the \texttt{pi-forall} style from the beginning.
