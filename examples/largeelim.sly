@@ -1,0 +1,8 @@
+not : Bool -> Bool .
+not = \x. if x then False else True.
+
+t : Bool -> U.
+t = \b. if b then Unit else Bool.
+
+bar : (y : Bool) -> t y.
+bar = \b. if b then () else True.

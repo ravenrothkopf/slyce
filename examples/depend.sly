@@ -1,0 +1,5 @@
+t : Bool -> U.
+t = \p. if p then Unit else Bool.
+
+f : (b : Bool) -> (t b).
+f = \q. if q then () else False.

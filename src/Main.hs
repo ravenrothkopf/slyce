@@ -3,23 +3,70 @@ module Main (main) where
 import System.Environment (getArgs)
 import System.Exit (exitFailure, exitSuccess)
 
-import Ast
+import System.Console.GetOpt
 
-typeCheckFile :: String -> IO ()
-typeCheckFile = undefined
+import Control.Monad (unless, when)
+import Control.Monad.State.Strict (evalState)
+
+import Ast
+import Context
+import TypeCheck
+import PrettyPrint
+
+import Parser (parse)
+import Scanner (scanTokens)
+
+readInput :: String -> IO String
+readInput "-" = getContents
+readInput filename = readFile filename
+
+typeCheckProgram :: Module -> IO [Sig]
+typeCheckProgram modu = do
+    res <- runTcMonad $ typeCheckModule modu
+    case res of
+        Left typeError -> do
+            print typeError
+            exitFailure
+        Right sigs -> return sigs
+
+data Flag = Scan | Parse | CheckTypes | Verbose
+    deriving (Show, Eq)
+
+options :: [OptDescr Flag]
+options = 
+    [ Option ['v']      ["verbose"]     (NoArg Verbose)    "chatty output"
+    , Option ['s', 'l'] ["scan", "lex"] (NoArg Scan)       "output scanned tokens"
+    , Option ['p']      ["parse"]       (NoArg Parse)      "output parsed AST"
+    , Option ['t']      ["type-check"]  (NoArg CheckTypes) "output checked types"
+    ]
 
 main :: IO ()
 main = do
-    [pathToFile] <- getArgs
-    typeCheckFile pathToFile
+    argv <- getArgs
+    let (opts, args, errs) = getOpt Permute options argv
+
+    when (not (null errs)) $ do
+        mapM_ putStrLn errs
+        exitFailure
+
+    unless (length args == 1) $ do
+        putStrLn "Error: must provide one file as input"
+        exitFailure
+
+    let pathToFile = head args
+    contents <- readInput pathToFile
+
+    let tokens = scanTokens contents
+    when (Scan `elem` opts) $ do
+        mapM_ print tokens
+
+    let modu = flip evalState emptyConstructorNames . parse $ tokens
+    when (Parse `elem` opts) $ do
+        print modu
+
+    sigs <- typeCheckProgram modu
+    when (CheckTypes `elem` opts) $ do
+        putStrLn "Checked signatures:"
+        mapM_ (putStrLn . (++".") . (' ':) . (' ':) . ppSig) sigs
+
     exitSuccess
-
-    {-
-type Ctx = [(Var, Type)]
-
-inferType :: Term -> Ctx -> Maybe Type
-inferType (Var x) ctx = lookupTy ctx x
-inferType Type ctx = Just Type
-
-lookupTy = undefined
--}

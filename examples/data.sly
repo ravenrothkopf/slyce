@@ -1,0 +1,35 @@
+data Bool' where
+    True',
+    False'.
+
+data List (t:U) where
+    Nil,
+    Cons of (x:t) (xs:List t).
+
+l : List Bool'.
+l = Cons True' (Cons False' Nil).
+
+data Maybe (a:U) where
+    Nothing,
+    Just of (a).
+
+maybeHead : (t:U) -> List t -> Maybe t.
+maybeHead = \t. \l.
+    match l with
+        | Nil -> Nothing
+        | Cons x xs -> Just x.
+
+not : Bool' -> Bool'.
+not = \p.
+    match p with
+        | True' -> False'
+        | False' -> True'.
+
+map : (a:U) -> (b:U) -> (a -> b) -> List a -> List b.
+map = \a. \b. \f. \l.
+    match l with
+        | Nil -> Nil
+        | Cons x xs -> Cons (f x) (map a b f xs).
+
+l' = map (Bool') (Bool') not l.
+

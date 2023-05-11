@@ -14,10 +14,22 @@ extra-source-files:  README.md
 executable slyce
   hs-source-dirs:      src
   main-is:             Main.hs
+  other-modules:       
+    Ast,
+    Context,
+    Equality,
+    TypeCheck,
+    Parser,
+    Scanner,
+    PrettyPrint
   default-language:    Haskell2010
   build-depends:
     base >= 4.7 && < 5,
-    unbound-generics >= 0.2
+    unbound-generics >= 0.4.3,
+    mtl >= 2.2.1,
+    array >= 0.5.4.0,
+    containers
+  build-tools:         happy, alex
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities
@@ -29,3 +41,8 @@ executable slyce
                        -Wredundant-constraints
   default-extensions:
     DeriveGeneric
+    DeriveAnyClass
+    MultiParamTypeClasses
+    DerivingStrategies
+    FlexibleInstances
+    GADTs

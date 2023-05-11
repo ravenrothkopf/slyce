@@ -1,0 +1,20 @@
+data Nat where
+    Zero,
+    Succ of (Nat).
+
+zero = Zero.
+one = Succ zero.
+two = Succ one.
+three = Succ two.
+
+data Vec (a:U) (n:Nat) where
+    Nil of (n = Zero),
+    Cons of (m:Nat) (a) (Vec a m) (n = Succ m).
+
+head : (a:U) -> (n:Nat) -> Vec a (Succ n) -> a.
+head = \a. \n. \v.
+    match v with
+        | Cons m x xs -> x.
+
+v : Vec Nat three.
+v = Cons two one (Cons one two (Cons zero three Nil)).

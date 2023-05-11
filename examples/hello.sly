@@ -1,0 +1,18 @@
+x : Bool.
+x = True.
+
+alwaysFalse : (x:Bool) -> Bool.
+alwaysFalse = \x . False.
+
+or : Bool -> Bool -> Bool.
+or = \p. \q. if p then True else q.
+
+and : Bool -> Bool -> Bool.
+and = \p. \q. if p then q else False.
+
+y : Bool.
+y = alwaysFalse x.
+
+z = and x y.
+
+w = or x y.

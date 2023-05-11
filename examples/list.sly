@@ -1,0 +1,35 @@
+or : Bool -> Bool -> Bool.
+or = \p. \q. if p then p else q.
+
+and : Bool -> Bool -> Bool.
+and = \p. \q. if p then q else p.
+
+not : Bool -> Bool.
+not = \p. if p then False else True.
+
+##########################
+#      list library
+##########################
+
+
+data List (t:U) where
+    Nil,
+    Cons of (x:t) (xs:List t).
+
+map : (a:U) -> (b:U) -> (a -> b) -> List a -> List b.
+map = \a. \b. \f. \l.
+    match l with
+        | Nil -> Nil
+        | Cons x xs -> Cons (f x) (map a b f xs).
+
+foldr : (a:U) -> (b:U) -> (a -> b -> b) -> b -> List a -> b.
+foldr = \a. \b. \f. \acc. \l.
+    match l with
+      | Nil -> acc
+      | Cons x xs -> f x (foldr a b f acc xs).
+
+any : List Bool -> Bool.
+any = foldr Bool Bool or False.
+
+all : List Bool -> Bool.
+all = foldr Bool Bool and True.
