@@ -6,7 +6,9 @@ module TypeCheck
     ) where
 
 import qualified Unbound.Generics.LocallyNameless as Unbound
+import Unbound.Generics.LocallyNameless.Unsafe (unsafeUnbind)
 import qualified Control.Monad.Except as Ex
+import Control.Monad (unless)
 import Debug.Trace (trace)
 import Context
 import Ast
@@ -85,6 +87,37 @@ typeCheckTerm (EqType a b) Nothing = do
     --Equal.equal typA typB
     -- TODO: checkType b typA instead of inferType b and equal?
     checkType b typA
+    return U
+
+typeCheckTerm (DCon dcname terms) Nothing = do
+    -- Get data constructor definition from the context.
+    tcons <- lookupDConAll dcname
+    case tcons of
+        -- We use pattern matching to accomplish two things:
+        --   Check for ambiguity: inferred DCon's can only have one associated TCon.
+        --   Ensure this is not a parameterized type, since these cannot be inferred.
+        [(tcname, (Telescope [], ConstructorDef _ _ (Telescope tele)))] -> do
+            let nArgs = length [d | d@(TypeSig _) <- tele]
+            unless (nArgs == length terms) $
+                err $ "Constructor " ++ dcname ++ " should have " ++ show nArgs ++
+                    " data arguments, but was given " ++ show (length terms) ++ " arguments."
+            -- Check actual args against DCon telescope.
+            typeCheckTeleArgs terms tele
+            return $ TCon tcname []
+        [_] -> do
+            err $ "Cannot infer parameters to type constructors in data constructor: " ++ dcname
+        _ -> do
+            err $ "Ambiguous data constructor: " ++ dcname
+
+typeCheckTerm (TCon tcname params) Nothing = do
+    -- This uses the same judgment as DCon, but the implementation details differ.
+    (Telescope tele, _) <- lookupTCon tcname
+    -- Ensure actuals match telescope.
+    unless (length tele == length params) $
+        err $ "Type constructor " ++ tcname ++ " should have " ++ show (length tele) ++
+            " data arguments, but was given " ++ show (length params) ++ " arguments."
+    -- Check that params have the correct types against the telescope.
+    typeCheckTeleArgs params tele
     return U
 
 -- checking mode
@@ -174,10 +207,191 @@ typeCheckTerm (Subst a y) (Just typ) = do
     extendCtxs (decls' ++ refl') $ checkType a typ
     return typ
 
+typeCheckTerm (Match scrut cases) (Just typ) = do
+    -- Infer type of scrutinee.
+    scrutTyp <- inferType scrut
+
+    -- Put scrutinee in weak head normal form.
+    -- This is probably unnecessary since this is only used as an argument to
+    -- `unify`, which performs normalization on its arguments anyway, but we
+    -- aren't gonna question it.
+    scrut' <- Equal.whnf scrut
+
+    -- Ensure that the type of a scrutinee is a type constructor.
+    -- We cannot pattern match on things that aren't data types!
+    -- Note: these params are the actual arguments, not the formal telescope.
+    (tcname, params) <- Equal.ensureTCon scrutTyp
+
+    -- Check each case.
+    let checkCase (Case bnd) = do
+    -- create list of defs that follow from unifying the scrutinee a with the pattern p
+    --   this is also delayed substitution
+    -- check the body of the case in the extended context against the expected type A
+
+            -- get the telescope for the vars in the pattern
+            (pat, body) <- Unbound.unbind bnd
+            -- Add variables in pattern to context. These include type
+            -- signatures of variables, as well as equality constraints on
+            -- variables.
+            decls <- declarePat pat (TCon tcname params)
+            -- TODO: what the fuck
+            -- TODO: what are these
+            decls' <- Equal.unify [] scrut' (pat2Term pat)
+            extendCtxs (decls ++ decls') $ checkType body typ
+            return ()
+    mapM_ checkCase cases
+
+    -- Make sure the cases are exhaustive.
+    -- Q: what happens if they aren't? Is that not well-typed?
+    -- Q: what happens if we don't use unsafeUnbind and instead unbind them normally?
+    let pats = [fst (unsafeUnbind bnd) | (Case bnd) <- cases]
+    exhaustivityCheck scrut' scrutTyp pats
+
+    return typ
+
+typeCheckTerm (DCon dcname args) (Just typ@(TCon tcname params)) = do
+    -- ^^Use pattern matching to ensure type to check against is a TCon.
+
+    -- Look up the DCon definition.
+    (Telescope ttele, Telescope dtele) <- lookupDCon dcname tcname
+    let nArgs = length [d | d@(TypeSig _) <- dtele]
+    unless (nArgs == length args) $
+        err $ "Constructor " ++ dcname ++ " should have " ++ show nArgs ++
+            " data arguments, but was given " ++ show (length args) ++ " arguments."
+
+    -- Since the data telescope may include vars from the type telescope, we
+    -- need to substitute the type arguments into the data telescope.
+    -- Substitute the names of type params with their actuals in the data telescope.
+    dtele' <- substTypeParamsInTele ttele params dtele
+
+    -- Check actual args against DCon telescope.
+    typeCheckTeleArgs args dtele'
+    return typ
+
 typeCheckTerm term (Just typ) = do
     typ' <- inferType term
     extendErr (Equal.equal typ typ') ("Inferred type:\n" ++ (ppTerm typ') ++ "\ndiffers from expected type:\n" ++ (ppTerm typ))
     return typ'
+
+typeCheckTerm t Nothing = do
+    err $ "cannot infer type of term:\n\t" ++ ppTerm t
+
+
+---------------------------
+-- Match helper functions
+---------------------------
+
+-- TODO: implement exhaustivity checking.
+exhaustivityCheck :: Term -> Type -> [Pattern] -> TcMonad ()
+exhaustivityCheck scrut scrutType pats = do
+    warn $ "Exhaustivity checking not implemented."
+    return ()
+
+----------------------------
+-- Datatype helper functions
+----------------------------
+
+-- | Type check all of the types contained in a telescope.
+typeCheckTele :: [Decl] -> TcMonad ()
+typeCheckTele [] = return ()
+typeCheckTele (Def x y : tele) = do
+    tx <- inferType (Var x)
+    checkType y tx
+    extendCtx (mkDef x y) $ typeCheckTele tele
+typeCheckTele (TypeSig sig : tele) = do
+    checkType (sigType sig) U
+    extendCtx (TypeSig sig) $ typeCheckTele tele
+typeCheckTele tele = err $ "Invalid telescope: " ++ show tele
+
+-- | check a list of args against the telescope for the constructor
+typeCheckTeleArgs :: [Term] -> [Decl] -> TcMonad ()
+typeCheckTeleArgs [] [] = return () -- nil case
+typeCheckTeleArgs args (Def x y : tele) = do
+    -- If you encounter an equality constraint, substitute all instances of
+    -- that variable in the rest of the unprocessed telescope. tele' is the new
+    -- telescope.
+    tele' <- substDefsInTele [(x,y)] tele
+    typeCheckTeleArgs args tele'
+typeCheckTeleArgs (term:args) (TypeSig (Sig name typ) : tele) = do
+    -- If you encounter a signature, check if the arg has that type.
+    checkType term typ
+    -- Because of dependent types, we add this definition to the rest of the telescope using substitution.
+    -- Q: why not just extend the context? Is that the same as this? Is this a
+    -- form of delayed substitution?
+    tele' <- substDefsInTele [(name, term)] tele
+    typeCheckTeleArgs args tele'
+typeCheckTeleArgs [] _ = err $ "Not enough arguments for constructor."
+typeCheckTeleArgs _ [] = err $ "Too many arguments for constructor."
+typeCheckTeleArgs _ tele = err $ "Invalid telescope."
+
+-- | substitute variables for their definition in a telescope
+substDefsInTele :: [(TermName, Term)] -> [Decl] -> TcMonad [Decl]
+substDefsInTele defs [] = return []
+substDefsInTele defs (Def x y : tele) = do
+    -- TODO: i have literally no idea how this works
+    let tx' = Unbound.substs defs (Var x)
+        ty' = Unbound.substs defs y
+    decls <- Equal.unify [] tx' ty'
+    decls' <- extendCtxs decls $ substDefsInTele defs tele
+    return (decls ++ decls)
+substDefsInTele defs (TypeSig (Sig name typ) : tele) = do
+    -- sure why not
+    typ' <- Equal.whnf $ Unbound.substs defs $ typ
+    let sig' = mkSig name typ'
+    tele' <- substDefsInTele defs tele
+    return (sig' : tele')
+substDefsInTele _ tele = err $ "Invalid telescope: " ++ show tele
+
+-- | Substitute type constructor arguments into data constructor telescope,
+-- since the names of the type constructor telescope may be used in the data
+-- constructor telescope.
+-- Takes the TCon telescope (so we can extract the parameter names), the args
+-- to the telescope, and the DCon telescope to substitute them into.
+substTypeParamsInTele :: [Decl] -> [Term] -> [Decl] -> TcMonad [Decl]
+substTypeParamsInTele ttele params dtele = do
+    let defs = zip [n | TypeSig (Sig n _) <- ttele] params
+    substDefsInTele defs dtele
+
+----------------------------
+-- pattern helper functions
+----------------------------
+
+-- | Convert a pattern to a term 
+pat2Term :: Pattern -> Term
+pat2Term (PatVar x) = Var x
+pat2Term (PatCon dc pats) = DCon dc (map pat2Term pats) 
+
+-- | Create Decls from a pattern of a given type.
+declarePat :: Pattern -> Type -> TcMonad [Decl]
+declarePat (PatVar x) typ = return [mkSig x typ]
+declarePat (PatCon dcname pats) typ = do
+    (tcname, params) <- Equal.ensureTCon typ    -- TODO: redundant?
+    (Telescope ttele, Telescope dtele) <- lookupDCon dcname tcname
+    dtele' <- substTypeParamsInTele ttele params dtele
+    declarePats dcname pats dtele'
+
+-- | Create Decls from a list of patterns and associated data constructor + telescope.
+declarePats :: DCName -> [Pattern] -> [Decl] -> TcMonad [Decl]
+-- Telescope Decl which is an equality constraint on variable x.
+declarePats dcname pats (Def x y:tele) = do
+    -- Extend the context so that the rest of the pattern has access to the constraint.
+    let constraint = mkDef x y
+    decls <- extendCtx constraint $ declarePats dcname pats tele
+    return (constraint : decls)
+declarePats dcname (pat : pats) (TypeSig (Sig name typ) : tele) = do
+    decls <- declarePat pat typ
+    -- Dependent types, so we need to make the term available to the rest of the telescope.
+    let term = pat2Term pat
+    decls' <- extendCtxs decls $ declarePats dcname pats (Unbound.subst name term tele)
+    return (decls ++ decls')
+declarePats _ [] [] = return []
+declarePats dc [] _ = err $ "Not enough patterns in match for data constructor " ++ dc
+declarePats dc _ [] = err $ "Too many patterns in match for data constructor " ++ dc
+declarePats dc _ _  = err $ "Invalid telescope: " ++ dc
+
+----------------------------
+-- module processing
+----------------------------
 
 -- After processing a decl, either add something to the hints or to the context.
 data EnvItem = AddHint Sig | AddCtx [Decl]
@@ -201,9 +415,19 @@ typeCheckDecl (Def name term) = do
 typeCheckDecl (TypeSig s) = do
     checkType (sigType s) U
     return $ AddHint s
-typeCheckDecl (Data tcon (Telescope args) dcons) = do
-    -- TODO: implement
-    return $ undefined
+typeCheckDecl (Data tcname (Telescope ttele) constructors) = do
+    -- Ensure the telescope is well-typed.
+    typeCheckTele ttele
+    -- Check each data constructor's telescope.
+    let checkConstructorDef defn@(ConstructorDef pos dcname (Telescope dtele)) =
+            --extendSourceLocation pos defn $
+                extendCtx (DataSig tcname (Telescope ttele)) $
+                     extendCtxTele ttele $
+                        typeCheckTele dtele
+    mapM_ checkConstructorDef constructors
+    -- TODO: ensure uniqueness of constructor names within a given data type declaration
+    return $ AddCtx [Data tcname (Telescope ttele) constructors]
+typeCheckDecl (DataSig _ _) = err $ "internal construct"
 
 typeCheckModule :: Module -> TcMonad [Sig]
 typeCheckModule mod = do

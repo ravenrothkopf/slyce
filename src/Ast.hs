@@ -44,14 +44,9 @@ data Term
   | Contra Term                             -- `contra` value that witnesses a contradictory type
   | EqType Term Term                        -- equality type `a = b`
   | Subst Term Term                         -- substitute one type for another, `subst t1 by t2`
-  | TCon TCName [Term]                      -- type constructor
-  | DCon DCName [Term]                      -- term/data constructor
+  | TCon TCName [Term]                      -- type constructor application
+  | DCon DCName [Term]                      -- term/data constructor application
   | Match Term [Case]                       -- pattern matching a term over cases
-  -- TODO:
-  -- Type equality (Eq)
-  -- Type Constructors (TCon)
-  -- Term Constructors (DCon)
-  -- case analysis (Match)
   deriving (Show, Generic)
 
 newtype Case = Case (Unbound.Bind Pattern Term)
@@ -66,6 +61,7 @@ data ConstructorDef = ConstructorDef SourcePos DCName Telescope
     deriving (Show, Generic)
     deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
 
+-- decls must be typesigs
 newtype Telescope = Telescope [Decl]
     deriving (Show, Generic)
     deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
@@ -120,7 +116,8 @@ data Decl
     | Def TermName Term
     -- Data constructors are added to the context after being processed.
     | Data TCName Telescope [ConstructorDef]
---  | DataSig TCName
+    -- Data signatures are used internally to provide a signature for data constructors.
+    | DataSig TCName Telescope
   deriving (Show, Generic, Typeable)
   deriving anyclass (Unbound.Alpha, Unbound.Subst Term)
 

@@ -5,8 +5,12 @@ module Context
     , lookupType
     , lookupDef
     , lookupHint
+    , lookupDConAll
+    , lookupDCon
+    , lookupTCon
     , extendCtx
     , extendCtxs
+    , extendCtxTele
     , extendHints
     , extendErr
     , extendSourceLocation
@@ -37,7 +41,8 @@ import Control.Monad.Reader
     asks,
   )
 import Control.Applicative ((<|>))
-import Data.List (intercalate)
+import Data.List (intercalate, find, lookup)
+--import Data.Maybe (listToMaybe)
 
 import Ast
 
@@ -97,6 +102,8 @@ emptyEnv = Env { getCtx   = []
                }
 
 ---------------------------------
+-- Lookup functions
+---------------------------------
 
 lookupType :: TermName -> TcMonad Sig
 lookupType v = do
@@ -124,6 +131,57 @@ lookupHint x = do
         where checkHint s@(Sig y t) | x == y = Just s
               checkHint _           = Nothing
 
+-- returns list of TCon names, telescope of type parameters, and constructor
+-- def with that DCon name.
+lookupDConAll :: DCName -> TcMonad [(TCName, (Telescope, ConstructorDef))]
+lookupDConAll dcname = do
+    ctx <- asks getCtx
+    scanCtx ctx
+        where scanCtx [] = return []
+              scanCtx ((Data t' tele cs) : ctx) =
+                  case find (\(ConstructorDef _ d _) -> d == dcname) cs of
+                      Nothing -> scanCtx ctx
+                      Just c -> do
+                          more <- scanCtx ctx
+                          return $ (dcname, (tele, c)) : more
+              scanCtx (_:ctx) = scanCtx ctx
+
+-- | Return the data constructor definition (type param telescope and
+-- constructor arg telescope) for a given DCon name and associated TCon name.
+-- We must return the type param telescope in order to check if the type is
+-- parameterized, since the type of data constructors cannot be inferred if the
+-- type is parameterized.
+lookupDCon :: DCName -> TCName -> TcMonad (Telescope, Telescope)
+lookupDCon dcname tcname = do
+    matches <- lookupDConAll dcname
+    case lookup tcname matches of
+        Just (ttele, ConstructorDef _ _ dtele) -> return (ttele, dtele)
+        Nothing -> err $ "Cannot find data constructor " ++ dcname ++
+                   " for type " ++ tcname ++ ". Potential matches were:\n" ++
+                   show matches
+
+-- Telescope is arguments to the TCon
+-- ConstructorDefs are the data constructors
+-- Nothing in the case of DataSig
+lookupTCon :: TCName -> TcMonad (Telescope, Maybe [ConstructorDef])
+lookupTCon tcname = do
+    ctx <- asks getCtx
+    scanCtx ctx
+        where scanCtx [] = err $ "Type constructor not found: " ++ tcname
+              scanCtx ((Data t' tele cs) : ctx) =
+                  if t' == tcname
+                  then return (tele, Just cs)
+                  else scanCtx ctx
+              scanCtx ((DataSig t' tele) : ctx) =
+                  if t' == tcname
+                  then return (tele, Nothing)
+                  else scanCtx ctx
+              scanCtx (_:ctx) = scanCtx ctx
+
+---------------------------------
+-- | Extension functions
+---------------------------------
+
 -- works like a continuation by executing the computation in a modified env
 -- local :: (r -> r) -> m a -> m a
 -- pattern match on the Env and modify only the `getCtx` field
@@ -132,6 +190,14 @@ extendCtx decl = local (\m@Env{getCtx = ctx} -> m{getCtx = decl:ctx})
 
 extendCtxs :: [Decl] -> TcMonad a -> TcMonad a
 extendCtxs decls = local (\m@Env{getCtx = ctx} -> m{getCtx = decls++ctx})
+
+extendCtxTele :: [Decl] -> TcMonad a -> TcMonad a
+extendCtxTele [] m = m
+extendCtxTele (Def x t2 : tele) m =
+  extendCtx (Def x t2) $ extendCtxTele tele m
+extendCtxTele (TypeSig sig : tele) m =
+  extendCtx (TypeSig sig) $ extendCtxTele tele m
+extendCtxTele ( _ : tele) m = err $ "Invalid telescope " ++ show tele
 
 extendHints :: [Sig] -> TcMonad a -> TcMonad a
 extendHints h = local (\m@Env{getHints = hints} -> m{getHints = h++hints})

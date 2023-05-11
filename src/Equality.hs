@@ -2,11 +2,14 @@ module Equality
     ( equal
     , ensurePi
     , ensureEqType
+    , ensureTCon
+    , unify
     , whnf
     ) where
 
 import qualified Unbound.Generics.LocallyNameless as Unbound
 import Control.Monad (guard)
+import Control.Monad.Except (unless, catchError, zipWithM, zipWithM_)
 import Ast
 import Context
 import PrettyPrint
@@ -64,7 +67,20 @@ equal a b =
                 equal rhs1 rhs2
                 Just (_, body1, _, body2) <- Unbound.unbind2 bnd1 bnd2
                 equal body1 body2
+            (TCon c1 a1, TCon c2 a2) | c1 == c2 -> do
+                zipWithM_ equal a1 a2
+            (DCon c1 a1, DCon c2 a2) | c1 == c2 -> do
+                zipWithM_ equal a1 a2
+            (Match s1 cs1, Match s2 cs2) | length cs1 == length cs2 -> do
+                equal s1 s2
+                let equalCase (Case bnd1) (Case bnd2) = do
+                        Just (p1, a1, p2, a2) <- Unbound.unbind2 bnd1 bnd2
+                        guard (p1 == p2)
+                        equal a1 a2
+                zipWithM_ equalCase cs1 cs2
             (_, _) -> err $ "terms are not equal:\n\t" ++ (show a') ++ "\n\t" ++ (show b') ++ "\n"
+
+----------------------------
 
 -- used for returning the subcomponents of Pi types
 ensurePi :: Term -> TcMonad (Type, Unbound.Bind TermName Type)
@@ -80,6 +96,15 @@ ensureEqType t = do
     case t' of
         (EqType a b) -> return (a, b)
         _            -> err $ "expected Eq type, found: " ++ show t'
+
+ensureTCon :: Term -> TcMonad (TCName, [Term])
+ensureTCon t = do
+    t' <- whnf t
+    case t' of
+        TCon name params -> return (name, params)
+        _ -> err $ "Expected a data type but found " ++ show t'
+
+----------------------------
 
 whnf :: Term -> TcMonad Term
 whnf v@(Var x) = do
@@ -124,5 +149,83 @@ whnf (Subst a y) = do
     case y' of
         Refl -> whnf a
         _    -> return $ Subst a y'
+whnf (Match scrut cases) = do
+    scrut' <- whnf scrut
+    case scrut' of
+        (DCon dcname args) -> f cases where
+          f (Case bnd : alts) = (do
+              (pat, body) <- Unbound.unbind bnd
+              defs <- patternMatches scrut' pat
+              whnf (Unbound.substs defs body))
+                `catchError` \ _ -> f alts
+          f [] = err $ "Internal error: couldn't find a matching branch for " ++
+                 show scrut' ++ " in " ++ show cases
+        _ -> return (Match scrut' cases)
+
 whnf term      = return term                   -- all types and lambda
+
+-- | Determine whether the pattern matches the argument
+-- If so return the appropriate substitution
+-- otherwise throws an error
+patternMatches :: Term -> Pattern -> TcMonad [(TermName, Term)]
+patternMatches term (PatVar x) = return [(x, term)]
+patternMatches term pat = do
+  t' <- whnf term
+  case (t', pat) of
+      (DCon d [], PatCon d' pats)   | d == d' -> return []
+      (DCon d args, PatCon d' pats) | d == d' ->
+          -- TODO: does this work?
+         concat <$> zipWithM patternMatches args pats
+      _ -> err $ "arg " ++ show t' ++ " doesn't match pattern " ++ show pat
+
+-----------------------
+
+-- | 'Unify' the two terms, producing a list of Defs
+-- If there is an obvious mismatch, this function produces an error
+-- If either term is "ambiguous" just fail instead.
+unify :: [TermName] -> Term -> Term -> TcMonad [Decl]
+unify ns tx ty = do
+  txnf <- whnf tx
+  tynf <- whnf ty
+  if Unbound.aeq txnf tynf
+    then return []
+    else case (txnf, tynf) of
+      (Var y, yty) | y `notElem` ns -> return [Def y yty]
+      (yty, Var y) | y `notElem` ns -> return [Def y yty]
+      (Pair a1 a2, Pair b1 b2) -> unifyArgs [a1, a2] [b1, b2]
+      (EqType a1 a2, EqType b1 b2) -> unifyArgs [a1, a2] [b1, b2]
+      (TCon s1 tms1, TCon s2 tms2)
+        | s1 == s2 -> unifyArgs tms1 tms2
+      (DCon s1 a1s, DCon s2 a2s)
+        | s1 == s2 -> unifyArgs a1s a2s
+      (Lam bnd1, Lam bnd2) -> do
+        (x, b1, _, b2) <- Unbound.unbind2Plus bnd1 bnd2
+        unify (x:ns) b1 b2
+      (Pi tyA1 bnd1, Pi tyA2 bnd2) -> do
+        (x, tyB1, _, tyB2) <- Unbound.unbind2Plus bnd1 bnd2
+        ds1 <- unify ns tyA1 tyA2
+        ds2 <- unify (x:ns) tyB1 tyB2
+        return (ds1 ++ ds2)
+      _ ->
+        if amb txnf || amb tynf
+          then return []
+          else err $ "Cannot equate " ++ show txnf ++ " and " ++ show tynf
+  where
+    unifyArgs (t1 : a1s) (t2 : a2s) = do
+      ds <- unify ns t1 t2
+      ds' <- unifyArgs a1s a2s
+      return $ ds ++ ds'
+    unifyArgs [] [] = return []
+
+-- | Is a term "ambiguous" when it comes to unification?
+-- In general, elimination forms are ambiguous because there are multiple
+-- solutions.
+amb :: Term -> Bool
+amb (App t1 t2) = True
+amb (If _ _ _) = True
+amb (LetPair _ _) = True
+amb (Match _ _) = True
+amb _ = False
+
+
 
