@@ -30,6 +30,26 @@ The full syntax understood when referencing the \texttt{slyce} parser in \texttt
 \end{lstlisting}
 \end{figure}
 
+The classic use case for dependent types is a list that is indexed over a particular length.
+In this program, we showcase the use of data constructors, $\Pi$ types, function declaration, and pattern matching.
+
+The type-safe list data type, \texttt{Vec} is indexed over a specific length using the dependent type system. 
+The implementation defines two new data types: \texttt{Nat} and \texttt{Vec}. 
+\texttt{Nat} represents natural numbers and is defined recursively as either Zero or the successor of another Nat. 
+\texttt{Vec} represents a list of values of type \texttt{a}, which has type \texttt{U} -- \texttt{slyce}'s type of types -- that has a length of \texttt{n} elements.
+
+The \texttt{Vec} data type has two constructors: \texttt{Nil} and \texttt{Cons}. 
+\texttt{Nil} creates an empty list with a length of zero, and \texttt{Cons} adds an element of type \texttt{a} to the beginning of an existing list of length \texttt{m}, resulting in a new list of the length of the tail incremented by one. 
+The type of the \texttt{Cons} constructor includes a proof that the length of the resulting list is one more than the length of the input list.
+
+The \texttt{head} function takes a \texttt{Vec} of length \texttt{Succ n} and returns its first element of type \texttt{a}. 
+The function pattern matches on the input list, using the \texttt{Cons} constructor to extract the head element.
+Notably, this function is type safe. 
+This means that if we pass it an empty list, \texttt{slyce} will produce a type error, not an index out of bounds error.
+
+The implementation also defines four values of type \texttt{Nat} representing the numbers zero, one, two, and three. 
+Finally, it creates a \texttt{Vec} of type \texttt{Vec Nat three} with three elements, using the nested \texttt{Cons} constructor to construct the list.
+
 \subsection{\texttt{largeelim.sly}: Dependent pattern matching/propositional equality}
 \begin{figure}[h!]
 \begin{lstlisting}
@@ -43,6 +63,7 @@ The full syntax understood when referencing the \texttt{slyce} parser in \texttt
     bar = \b. if b then () else True.    
 \end{lstlisting}
 \end{figure}
+
 \subsection{\texttt{sym.sly}: Definitional equality}
 \begin{figure}[h!]
 \begin{lstlisting}
