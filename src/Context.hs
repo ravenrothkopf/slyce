@@ -72,7 +72,7 @@ data Err = Err [SourceLocation] String
 instance Show Err where
     show (Err [] msg) = msg-- ++ "\nin the expression:\nPosition Unknown"
     show (Err ((SourceLocation p term) : _) msg) =
-        show p ++ msg ++ "\nin the expression:\n" ++ show term ++ "\n" ++ ppTerm term
+        msg ++ "\nin the expression:\n" ++ (show p) ++ ppTerm term
 
 instance Semigroup Err where
   (Err src1 d1) <> (Err src2 d2) = Err (src1 ++ src2) (d1 `mappend` d2)
@@ -236,13 +236,13 @@ getContext = asks getCtx
 err :: String -> TcMonad b
 err d = do
     loc <- asks getLoc
-    throwError $ Err loc d
+    throwError $ Err loc (d ++ "\n")
 
 -- | Print a warning
 warn :: String -> TcMonad ()
 warn e = do
     loc <- asks getLoc
-    liftIO $ putStrLn $ "warning: " ++ (show $ Err loc e)
+    liftIO $ putStrLn $ "warning: " ++ (show $ Err loc e) ++ "\n"
 
 traceMonad :: (Show a, Monad m) => String -> a -> m a
 traceMonad s x = trace ("\t" ++ s ++ show x ++ "\n") (return x)

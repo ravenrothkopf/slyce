@@ -66,6 +66,7 @@ main = do
 
     sigs <- typeCheckProgram modu
     when (CheckTypes `elem` opts) $ do
-        mapM_ (putStrLn . ppSig) sigs
+        putStrLn "Checked signatures:"
+        mapM_ (putStrLn . (++".") . ('\t':) . ppSig) sigs
 
     exitSuccess

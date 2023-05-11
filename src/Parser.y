@@ -64,12 +64,13 @@ import Ast
   idUpper   { TokenPos p (TokenIdUpper s) }
 
 %right '->'
-%right '>'
-%left '<'
 %nonassoc NOELSE 'else'
 
-%right funApp
-%left conApp
+%right '('
+%left ')'
+%nonassoc '.'
+%right ':'
+%nonassoc CON
 
 %%
 program --> Module
@@ -147,6 +148,7 @@ patternlist --> [Pattern]
 
 cases --> [Case]
     : cases '|' case   { $3:$1 }
+    | '|' case         { [$2] }
     | case             { [$1] }
 
 case --> Case
@@ -168,8 +170,18 @@ term --> Term
     | term '=' term                      { Pos (getTermPos $1) (EqType $1 $3) }
     | 'contra' term                      { Pos (getPos $1) (Contra $2) }
     | 'match' term 'with' cases          { Pos (getPos $1) (Match $2 (reverse $4)) }
-    | app                                { $1 }
-    | atom                               { $1 }
+    | conApp                             { $1 }
+    | funApp                             { $1 }
+    | '(' term ')'                       { Pos (getPos $1) $2 }
+    | variable                               { Pos (fst $1) (Var (snd $1)) }
+    | conName %prec CON                  { Pos (fst $1) (Con (snd $1) []) }
+    | 'U'                                { Pos (getPos $1) U }
+    | 'Unit'                             { Pos (getPos $1) UnitType }
+    | '(' ')'                            { Pos (getPos $1) UnitLit }
+    | 'Bool'                             { Pos (getPos $1) (BoolType) }
+    | 'True'                             { Pos (getPos $1) (BoolLit True) }
+    | 'False'                            { Pos (getPos $1) (BoolLit False) }
+    | 'Refl'                             { Pos (getPos $1) Refl }
 
 app --> Term
     : conApp                             { $1 }
@@ -189,8 +201,8 @@ conApp --> Term
                -}
 
 args --> [Term]
-    : args atom     { $2:$1 }
-    | args term     { $2:$1 }
+    : args atom             { $2:$1 }
+    | args '(' term ')'     { $3:$1 }
     | {- empty -}   { [] }
 
 funApp --> Term
@@ -199,6 +211,7 @@ funApp --> Term
 atom --> Term
     : '(' term ')'                       { Pos (getPos $1) $2 }
     | variable                               { Pos (fst $1) (Var (snd $1)) }
+    | conName %prec CON                  { Pos (fst $1) (Con (snd $1) []) }
     | 'U'                                { Pos (getPos $1) U }
     | 'Unit'                             { Pos (getPos $1) UnitType }
     | '(' ')'                            { Pos (getPos $1) UnitLit }

@@ -434,7 +434,7 @@ typeCheckDecl (Data tcname (Telescope ttele) constructors) = do
                         typeCheckTele dtele
     mapM_ checkConstructorDef constructors
     -- TODO: ensure uniqueness of constructor names within a given data type declaration
-    warn $ "Checked data def: " ++ show (Data tcname (Telescope ttele) constructors)
+    warn $ "Checked data def:\n" ++ ppDecl (Data tcname (Telescope ttele) constructors)
     return $ AddCtx [Data tcname (Telescope ttele) constructors]
 typeCheckDecl (DataSig _ _) = err $ "internal construct"
 
