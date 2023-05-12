@@ -1,19 +1,31 @@
 \section{Our approach}
 Our implementation process for \texttt{slyce} was iterative, and consisted of four main components when tackling any given feature.
 \begin{enumerate}
-    \item Read \texttt{pi-forall}'s documentation on the specific feature we sought to implement
-    \item Attempt to implement the feature while referencing the documentation
-    \item Check our approach with Weirich's source code
-    \item Test our additions and debug (alot)
+    \item Read \texttt{pi-forall}'s explanation of the specific feature we sought to implement
+    \item Attempt to implement the feature while referencing the explanation
+    \item Compare our approach with Weirich's source code
+    \item Test our additions with some examples and debug (alot)
 \end{enumerate}
 
 Following the style of the \texttt{pi-forall} tutorial, we began with a simple, core language without any bells and whistles.
 Our first iterations of \texttt{slyce} were without error messages or a parser.
 Thus, step \textbf{5} of the implementation process was originally primitive. 
 We began with simply loading our modules into Haskell's \texttt{ghci} environment and testing from there.
-As we progressed farther in the tutorial and type checking features built in complexity, we added these tools.
+As we progressed farther in the tutorial and type checking features built in
+complexity, we added these tools in response to the need for convenience of
+testing and
+better error reporting for debugging.
 This process ensured that we deeply understood the foundation of our type checker before we began to add new, more involved features. 
+It also allowed us to motivate our own development of the peripheral features
+of our language; since Weirich's tutorial focuses on only the type checker and
+a few other components, we had the freedom to adopt our own approach to the
+parser, pretty printer, error tracer, and datatypes.
 
 The core theories behind dependent type checking in \texttt{slyce} largely mirror that of \texttt{pi-forall}.
-Weirich's tutorial covers the theory and leaves all the other features that must come with a dependent type checker up to interpretation.
-For that reason, we diverge the most from \texttt{pi-forall} in our parser and error checking approaches, though upon reflection in Section~\ref{reflection}, we wish we had implemented our parser in the \texttt{pi-forall} style from the beginning.
+Weirich's tutorial covers the theory and leaves all the other features that
+must come with a usable dependent type checker up to interpretation.
+For that reason, we diverge the most from \texttt{pi-forall} in our parser and
+error tracing approaches, though upon reflection in Section~\ref{reflection},
+we wish we had implemented our parser in the \texttt{pi-forall} style from the
+beginning due to fundamental differences between parser combinators and parser
+generators.
