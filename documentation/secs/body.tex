@@ -1,8 +1,6 @@
 \input{secs/overview.tex}
 \input{secs/installation.tex}
-
 \input{secs/examples.tex}
- 
 \input{secs/approach.tex}
 
 \section{Dependent types}
@@ -19,4 +17,34 @@ The key feature showcased in \texttt{slyce} is dependent type checking.
 \subsection{Data types}
 
 \section{Discussion and reflections}\label{reflection}
+Upon much reflection and experience with this tutorial, our main takeaway from this project is to \emph{always trust Stephanie Weirich}!
+Many times throughout our development process, after checking our implementation of a feature with \texttt{pi-forall}, we would conclude that the subtle differences in our approaches were irrelevant.
+Later down the line--sometimes much later--we would come to realize that those differences actually make or break the type checker.
+
+A concrete example of this is the API call to the\newline \texttt{Unbound.Generics.LocallyNameless} library's freshness monad to generate fresh names for our terms. 
+In \texttt{pi-forall} and \texttt{slyce}, the \texttt{Unbound.unbind} is used to unbind term names from their bodies in $\lambda$ expressions and $\Pi$ types.
+When unbinding two different term names from their bodies and checking for propositional equivalence, \texttt{pi-forall} uses \texttt{Unbound.unbind2Plus} to unbind the two terms at the same time. 
+After reading the documentation that was referred to in the tutorial on this call, we concluded that our original approach of unbinding the names separately was satisfactory. 
+It was only after implementing extensive error messages, painstakingly tracing a program through the entire type checker, and hours of debugging when we realized that this decision was the source of very subtle naming error.
+\texttt{Unbound.unbind2Plus} unbinds two names and gives them the same fresh name, while \texttt{Unbound.unbind}ing separately results in different names, eventually causing an error when performing equivalence checking.
+
+%% insert stuff about parser here?
+
+One drawback of this reflection is that \texttt{pi-forall} is a delicate piece of software. 
+It left very little room for experimentation or divergence from the source code, especially as we got further and further into the tutorial.
+The specificity of the language also rendered the many other dependent type checker tutorials unhelpful because little seemed to apply to Weirich's approach.
+
+For example, we struggled with the lack of documentation and relevance of the \texttt{Unbound.instantiate} call for substitution when performing reduction via weak head normal form.
+In our implementation, when performing substitution into the bodies of let-expressions and applications, we were first unbinding the binder and then performing the substitution. 
+Weirich, on the other hand, uses the special \texttt{Unbound.instantiate} call which essentially combines these processes. 
+Upon investigation, we discovered that Weirich herself implemented this feature into the library specifically for \texttt{pi-forall}, and \texttt{Unbound.instantiate} was just made available in the latest release of the library, though this tutorial was published last year.
+
+We believe that the process of "misconception to realization to correction" is a very valuable outcome of the project. 
+The only way we could truly understand the value and inner workings of the implementation was to try it ourselves and then come to the conclusion that we were wrong, after re-examination.
+We would not have been able to conceptualize much of \texttt{pi-forall}'s source code without this time-consuming yet ultimately rewarding process.
+
+
+
+
+
 
