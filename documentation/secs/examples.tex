@@ -1,10 +1,12 @@
 \section{\texttt{slyce} example programs}
-To give a taste for \texttt{slyce}, we first walk through a set of example programs that can be found in the \texttt{examples/} subdirectory of the \texttt{slyce} source code.
+To give a taste for \texttt{slyce}, we first walk through a set of example
+programs that can be found in the \texttt{examples/} subdirectory of the \texttt{slyce} source code.
 These examples provide a concrete reference for \texttt{slyce}'s key features discussed throughout the rest of this report.
-While we do not explicitly cover the syntax of \texttt{slyce}, we hope that a pass over these examples, as well as the rest in the \texttt{examples/} subdirectory, serve as an extensive set of use cases.
-The full syntax understood when referencing the \texttt{slyce} parser in \texttt{Parser.hs}.
+While we do not explicitly cover the syntax of \texttt{slyce}, we hope that a
+pass over these examples, as well as the rest in the \texttt{examples/} subdirectory, serve as an extensive set of use cases.
+The full syntax is available in the \texttt{slyce} parser in \texttt{Parser.hs}.
  
-\subsection{\texttt{vec.sly}: The \texttt{slyce} Hello World program}
+\subsection{\texttt{vec.sly}: The "Hello World" of dependent types}
 \begin{figure}[h!]
 \begin{lstlisting}
     data Nat where
@@ -30,30 +32,74 @@ The full syntax understood when referencing the \texttt{slyce} parser in \texttt
 \end{lstlisting}
 \end{figure}
 
-The classic use case for dependent types is a list that is indexed over a particular length.
-In this program, we showcase the use of data constructors, $\Pi$ types, function declaration, and pattern matching.
+The classic use case for dependent types is a vector parameterized by the type
+of its elements and its length.
+In this program, we showcase the use of data types, $\Pi$ types, function declaration, and pattern matching.
 
-The type-safe list data type, \texttt{Vec} is indexed over a specific length using the dependent type system. 
+The type-safe vector data type, \texttt{Vec} is indexed over a specific length using the dependent type system. 
 The implementation defines two new data types: \texttt{Nat} and \texttt{Vec}. 
 \texttt{Nat} represents natural numbers and is defined recursively as either Zero or the successor of another Nat. 
-\texttt{Vec} represents a list of values of type \texttt{a}, which has type \texttt{U} -- \texttt{slyce}'s type of types -- that has a length of \texttt{n} elements.
+\texttt{Vec} represents a vector of values of type \texttt{a}, which has type \texttt{U} -- \texttt{slyce}'s type of types -- that has a length of \texttt{n} elements.
 
 The \texttt{Vec} data type has two constructors: \texttt{Nil} and \texttt{Cons}. 
-\texttt{Nil} creates an empty list with a length of zero, and \texttt{Cons} adds an element of type \texttt{a} to the beginning of an existing list of length \texttt{m}, resulting in a new list of the length of the tail incremented by one. 
-The type of the \texttt{Cons} constructor includes a proof that the length of the resulting list is one more than the length of the input list.
+\texttt{Nil} creates an empty vector with a length of zero, and \texttt{Cons}
+adds an element of type \texttt{a} to the beginning of an existing vector of
+length \texttt{m}, resulting in a new vector with the type same type and a
+length \texttt{Succ m}, i.e. the length of the tail incremented by one. 
+The type of the \texttt{Cons} constructor includes a proposition that the length of
+the resulting vector is one more than the length of the input vector. This is
+not an argument to the constructor, but constraint on the other arguments.
 
-The \texttt{head} function takes a \texttt{Vec} of length \texttt{Succ n} and returns its first element of type \texttt{a}. 
-The function pattern matches on the input list, using the \texttt{Cons} constructor to extract the head element.
-Notably, this function is type safe. 
-This means that if we pass it an empty list, \texttt{slyce} will produce a type error, not an index out of bounds error.
+The \texttt{head} function takes a \texttt{Vec} of length \texttt{Succ n} and
+returns its first element, which has type \texttt{a}. 
+The function pattern matches on the input vector, using the \texttt{Cons} constructor to extract the head element.
+Since the vector has length \texttt{Succ n}, it cannot be empty, so this
+function is type safe: it cannot result in a runtime error, since passing it an
+empty vector is a compile-time type error.
 
-The implementation also defines four values of type \texttt{Nat} representing the numbers zero, one, two, and three. 
-Finally, it creates a \texttt{Vec} of type \texttt{Vec Nat three} with three elements, using the nested \texttt{Cons} constructor to construct the list.
+As an example of how to use the vector data type constructors, we include a
+definition of a vector of type \texttt{Vec Nat three} (i.e., a vector of
+three natural numbers). In each invocation of \texttt{Cons}, the first argument
+is the length of the tail vector and the second argument is the element to
+prepend to the front of the vector.
 
-\subsection{\texttt{largeelim.sly}: Dependent pattern matching/propositional equality}
+\subsection{\texttt{list.sly}: Lists}
 \begin{figure}[h!]
 \begin{lstlisting}
-    not : Bool -> Bool .
+    data List (t:U) where
+        Nil,
+        Cons of (x:t) (xs:List t).
+
+    map : (a:U) -> (b:U) -> (a -> b) -> List a -> List b.
+    map = \a. \b. \f. \l.
+        match l with
+            | Nil -> Nil
+            | Cons x xs -> Cons (f x) (map a b f xs).
+
+    foldr : (a:U) -> (b:U) -> (a -> b -> b) -> b -> List a -> b.
+    foldr = \a. \b. \f. \acc. \l.
+        match l with
+          | Nil -> acc
+          | Cons x xs -> f x (foldr a b f acc xs).
+
+    any : List Bool -> Bool.
+    any = foldr Bool Bool or False.
+
+    all : List Bool -> Bool.
+    all = foldr Bool Bool and True.
+\end{lstlisting}
+\end{figure}
+This example demonstrates a small library of list functions. Lists are written
+as in Haskell: they are parameterized by the type of their elements, but do not
+include information about their length.
+
+Due to parametric polymorphism, the polymorphic \texttt{map} and \texttt{fold}
+functions must take type arguments.
+
+\subsection{\texttt{largeelim.sly}: Propositional equality}
+\begin{figure}[h!]
+\begin{lstlisting}
+    not : Bool -> Bool.
     not = \x. if x then False else True.
     
     t : Bool -> U.
@@ -61,10 +107,42 @@ Finally, it creates a \texttt{Vec} of type \texttt{Vec Nat three} with three ele
     
     bar : (y : Bool) -> t y.
     bar = \b. if b then () else True.    
+
+    x : Unit.
+    x = bar True.
+
+    y : Bool.
+    y = bar False.
+
+    z : (Unit = t True).
+    z = Refl.
+
+    w : (Bool = t False).
+    w = Refl.
 \end{lstlisting}
 \end{figure}
+This example demonstrates a simple use of dependent types to write an use a
+function, \texttt{bar}, whose output type depends on the value of its input.
 
-\subsection{\texttt{sym.sly}: Definitional equality}
+The use of \texttt{bar} is shown in \texttt{x} and \texttt{y}, which have
+different types depending on what value was passed to \texttt{bar}.
+
+Furthermore, we use propositional equality to demonstrate that \texttt{t True}
+really is equal to \texttt{Unit}, and respectively for \texttt{False} and
+\texttt{Bool}.
+
+\texttt{Refl} is a language built-in proof of reflexivity, i.e., witness of an equality type that
+corresponds to a proposition that two propositions are equal.
+Since these equality propositions are true by definition of \texttt{t}, the
+program type checks. This works due to our implementation of definitional
+equality, which reduces terms to weak head normal form when checking if they
+are equivalent. See implementation for more details.
+
+If we swapped the arguments to the types of \texttt{z} and \texttt{w}, the
+program would fail to type check, as it cannot prove that \texttt{t False} is
+equal to \texttt{Unit}... because it isn't!
+
+\subsection{\texttt{sym.sly}: Propositional equality}
 \begin{figure}[h!]
 \begin{lstlisting}
     sym : (a:U) -> (x:a) -> (y:a) -> (x = y) -> y = x.
@@ -79,3 +157,20 @@ Finally, it creates a \texttt{Vec} of type \texttt{Vec Nat three} with three ele
     not_true_is_false = sym Bool False (not True) false_is_not_true.
 \end{lstlisting}
 \end{figure}
+To elaborate further on propositional equality, we exhibit a function that
+proves the symmetric property of equality.
+
+Given a proof, \texttt{pf}, that proposition \texttt{x} equals proposition \texttt{y}
+, \texttt{sym} returns a proof that \texttt{y = x}.
+It achieves this by using the built-in function \texttt{subst}, which in this
+case substitutes the reflexivity proof into the proof of equality, thus
+swapping the variables and returning a new proof.
+
+The rest of the file is an example of using this symmetry prover to show that
+\texttt{False = not True} implies \texttt{not True = False}. This would fail to
+type check if we gave it an untrue equality proposition.
+
+Propositional equality is a deep and subtle art which we have not fully
+explored or understood. This aspect of \texttt{slyce} connects us closely to
+dependently typed languages like Agda and Coq, which prominently feature the
+application of dependent types to logic and theorem proving.
