@@ -1,0 +1,177 @@
+\input{secs/overview.tex}
+\input{secs/installation.tex}
+\input{secs/examples.tex}
+\input{secs/approach.tex}
+
+\section{Background: Dependent types}
+The key feature showcased in \texttt{slyce} is dependent type checking.
+
+Dependent types are one direction in Barendregt's lambda cube describing types
+that depend on terms. In a dependently typed language like \texttt{slyce},
+little or no distinction is made between terms and types. Types may be
+parameterized not just by other types, but by terms as well. For instance, a
+type like \texttt{Vec (a:U) (n:Nat)} is parameterized by a type and a term, and specific instances
+of this type in a type signature may even call type constructors, data
+constructors, or functions that return types, such as \texttt{Succ (n:Nat)}.
+
+The examples above
+provide a good overview of some of the key features of dependently typed
+languages. Some of the especially cool features of dependent types, which
+motivated us to explore this area, include type safety and a robust system for
+propositions as types.
+
+Implementing dependent types requires the programmer to pay attention to many
+subtle details that are not as relevant in other type systems such as System F.
+The fundamental difference is that because types may depend on terms,
+deciding whether two types (or terms) are equivalent for the purposes of type
+checking is highly non-trivial, and necessarily involves some amount of
+compile-time evaluation. Following Weirich's tutorial, we have accomplished
+this using weak head normal form reduction of terms/types.
+
+Some other difficulties that may arise when implementing dependent types may
+include: unification, distinguishing constructors and functions, and many more
+possibilities to introduce parser ambiguities because the line between types
+and terms breaks down.
+
+The subtleties of dependent types imply various approaches to their
+implementation. The implementation that follows has its own advantages and
+limitations. Regrettably, since
+we focused mainly on implementing Weirich's tutorial, we are unable to provide
+a detailed comparison between this and other approaches, nor are we confident
+to describe the theoretical underpinnings of our particular implementation and
+a proof of its properties. This would require a knowledge of dependent type
+theory that we simply do not possess. However,
+we hope that our future studies will expose us to the depth of dependent type
+theory. Implementing this language has allowed us to dip our toes in the water,
+and we are excited to dive in.
+
+\input{secs/typesystem.tex}
+
+\input{secs/implementation.tex}
+
+\section{Key features}
+We would like to highlight and discuss a few key features with an eye towards
+implementation.
+
+\subsection{$\Pi$ types}
+The central feature of any dependent type system is the $\Pi$ type. This is the
+type of functions where the output type may depend on the input type. In order
+to implement this, our \texttt{Pi} constructor in the AST takes a name and type for the
+input type and a term for the output type, where the name is bound in the
+output type.
+
+To type check lambda abstractions, we must check the type of the body with the
+bound variable of the abstraction added to the context with the input type of
+the \texttt{Pi} type.
+
+To type check function application, we must instantiate the \texttt{Pi} type of
+the function with the value being applied.
+
+\subsection{Equality types}\label{equal}
+With propositions as types, equality types are a very interesting feature of
+our language. Equality types merely represent that two . They are associated
+with two forms: \texttt{Refl} (a value of an equality type) and \texttt{Subst a
+b}, which allows us to use equality proofs to transform arbitrary terms into
+desired equivalent terms.
+
+When type checking \texttt{Refl}, we must verify that the types it claims are
+equal are in fact definitionally equal.
+
+When type checking \texttt{Subst}, we verify that that proof passed in has
+equality type, and then we add new definitions to the context that allow the
+type checker to make use of equality to produce the desired new output type.
+
+\subsection{Flow sensitivity}\label{flow}
+Flow sensitivity is an optimization for eliminators like \texttt{If} that,
+instead of just simply type checking each branch of the \texttt{If}, makes use
+of the contextual information implied by the flow. Specifically, in \texttt{If}, when type checking the
+consequent branch, if the condition can be reduced to a variable, we add a new
+declaration to the context just for this branch that equates the condition with
+\texttt{True} (and respectively for the \texttt{False} case). This can help
+simplify the type checking of each branch.
+
+We perform a similar optimization for the \texttt{LetPair} eliminator.
+
+\subsection{Data types}
+Data types are the feature that allows us to express more interesting
+constructs, proofs, and programs in our language.
+
+The implementation of data types is briefly described above, but it is too
+complex to go into detail here. Please see our implementation, which contains
+many comments documenting the process of type checking data types.
+
+In order to effectively use data types, we implement general dependent pattern
+matching via a \texttt{Match} expression, equivalent to Haskell's
+\texttt{case x of ...} expression. The implementation of this involves
+unifying each pattern with the reduced scrutinee in order to effectively
+type check each body of the match expression.
+
+\section{Discussion and reflections}\label{reflection}
+Upon much reflection and experience with this tutorial, our main takeaway from this project is to \emph{always trust Stephanie Weirich}!
+Many times throughout our development process, after checking our implementation of a feature with \texttt{pi-forall}, we would conclude that the subtle differences in our approaches were irrelevant.
+Later down the line--sometimes much later--we would come to realize that those differences actually make or break the type checker.
+
+A concrete example of this is the API call to the\newline \texttt{Unbound.Generics.LocallyNameless} library's freshness monad to generate fresh names for our terms. 
+In \texttt{pi-forall} and \texttt{slyce}, the \texttt{Unbound.unbind} is used to unbind term names from their bodies in $\lambda$ expressions and $\Pi$ types.
+When unbinding two different term names from their bodies and checking for propositional equivalence, \texttt{pi-forall} uses \texttt{Unbound.unbind2Plus} to unbind the two terms at the same time. 
+After reading the documentation that was referred to in the tutorial on this call, we concluded that our original approach of unbinding the names separately was satisfactory. 
+It was only after implementing extensive error messages, painstakingly tracing a program through the entire type checker, and hours of debugging when we realized that this decision was the source of very subtle naming error.
+\texttt{Unbound.unbind2Plus} unbinds two names and gives them the same fresh name, while \texttt{Unbound.unbind}ing separately results in different names, eventually causing an error when performing equivalence checking.
+
+%% insert stuff about parser here?
+We suffered a similar comeuppance when, after initially deciding that it would
+be simpler to use the Happy LALR parser generator instead of using an LL parser
+combinator like Weirich, we found that our parser was unable to satisfactorily
+parse data types. This was the last chapter and the last thing we implemented,
+so it became a frantic search to find a way to distinguish constructors from
+function application and type constructors from data constructors. We settled
+on a solution that works for most cases, but due to time limitations, we are
+left with numerous shift/reduce and reduce/reduce errors that make our parser
+fragile; it frequently incorrectly parses function application. Had we more
+time, we would either reimplement our parser using parser combinators like Weirich
+does, or adopt the approach that SSLANG takes of using SYB's
+\texttt{everywhere} function to modify the abstract syntax tree after an
+initial parse.
+
+One drawback of this reflection is that \texttt{pi-forall} is a delicate piece of software. 
+It left very little room for experimentation or divergence from the source code, especially as we got further and further into the tutorial.
+This is not necessarily a criticism of the tutorial, as it certainly
+accomplishes its pedagogical goal and we learned a ton. This is more a
+reflection on the complexity and subtlety of dependent type theory. That being
+said, the difficulties we encountered forced us to really understand what was
+going on. If Weirich had included more documentation or explanation of some
+more arcane choices, we might not have come away with such a deep understanding
+of our own implementation.
+
+The specificity of the \texttt{pi-forall} language and its quirks also rendered
+the many other dependent type checker tutorials unhelpful because little seemed
+to carry over to Weirich's approach.
+Even though many of the problems other tutorials tackle are the same, the approach tends to
+be completely different, and in many cases, we found ourselves unsure about whether small
+changes to the implementation would change important properties of the type
+system, such as making it unsound. We lack confidence in our ability to
+reason about how minor alterations to the type checker would have butterfly
+effects on the properties of our system.
+
+For example, we struggled with the lack of documentation and relevance of the \texttt{Unbound.instantiate} call for substitution when performing reduction via weak head normal form.
+In our implementation, when performing substitution into the bodies of let-expressions and applications, we were first unbinding the binder and then performing the substitution. 
+Weirich, on the other hand, uses the special \texttt{Unbound.instantiate} call which essentially combines these processes. 
+Upon investigation, we discovered that Weirich herself implemented this feature into the library specifically for \texttt{pi-forall}, and \texttt{Unbound.instantiate} was just made available in the latest release of the library, though this tutorial was published last year.
+
+Another example: early on, we figured there was no good reason that Weirich
+processes functions and signatures one at a time, as opposed to adding them all
+to the context at once. For simplicity, and because Weirich did not explain
+this choice in the tutorial or the code documentation, we opted for the latter.
+This ended up making our type system unsound, and a long session with ChatGPT
+helped us understand how we could detect unsoundness through examples. We ended
+up implementing an approach nearly identical to that of Weirich.
+
+We believe that the process of "misconception to realization to correction" is a very valuable outcome of the project. 
+The only way we could truly understand the value and inner workings of the implementation was to try it ourselves and then come to the conclusion that we were wrong, after re-examination.
+We would not have been able to conceptualize much of \texttt{pi-forall}'s source code without this time-consuming yet ultimately rewarding process.
+
+
+
+
+
+

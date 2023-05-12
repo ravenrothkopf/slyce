@@ -86,7 +86,7 @@ typeCheckTerm (EqType a b) Nothing = do
     typA <- inferType a
     --typB <- inferType b
     --Equal.equal typA typB
-    -- TODO: checkType b typA instead of inferType b and equal?
+    -- TODO: are these two implementations equivalent
     checkType b typA
     return U
 
@@ -240,8 +240,7 @@ typeCheckTerm (Match scrut cases) (Just typ) = do
             -- signatures of variables, as well as equality constraints on
             -- variables.
             decls <- declarePat pat (Con tcname params)
-            -- TODO: what the fuck
-            -- TODO: what are these
+            -- TODO: why does this work
             decls' <- Equal.unify [] scrut' (pat2Term pat)
             extendCtxs (decls ++ decls') $ checkType body typ
             return ()
@@ -336,7 +335,7 @@ typeCheckTeleArgs _ tele = err $ "Invalid telescope."
 substDefsInTele :: [(TermName, Term)] -> [Decl] -> TcMonad [Decl]
 substDefsInTele defs [] = return []
 substDefsInTele defs (Def x y : tele) = do
-    -- TODO: i have literally no idea how this works
+    -- TODO: what does unify do here exactly
     let tx' = Unbound.substs defs (Var x)
         ty' = Unbound.substs defs y
     decls <- Equal.unify [] tx' ty'

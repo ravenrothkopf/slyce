@@ -1,0 +1,97 @@
+\section{Haskell implementation: code overview}
+%key points from all of the files
+
+\subsection{Main.hs}
+The entrypoint to our type checker is Main.hs.
+Here, we parse the command line options and arguments, call the scanner,
+parser, and type checker, and print the results or report an error.
+
+\subsection{Ast.hs}
+The abstract syntax tree. This file contains data type definitions for all of
+the constructs in the language, along with some important typeclass instances
+and derivations so that we can use \texttt{Unbound} and other libraries on our
+language.
+
+\subsection{Context.hs}
+This file defines the monad, \texttt{TcMonad}, that we use to pass state through our type checker.
+The monad consists of a stack of monad transformers: \texttt{Unbound}'s
+freshness monad for name capture, a \texttt{ReaderT} for getting declarations
+and position information from the environment, an \texttt{ExceptT} for
+error handling and debugging messages, and \texttt{IO} at the bottom for
+printing the result.
+
+This file also defines the helper functions which interact with
+\texttt{TcMonad}. These largely fall into two categories: functions which
+lookup a name in the environment, and functions which extend the environment
+with a new definition or type signature. These are used frequently for a
+variety of purposes throughout our type checker.
+
+\subsection{TypeCheck.hs}
+This is the core of our implementation and the largest file in our software.
+TypeCheck exports the functions for taking a module or an individual
+declaration and type checking it in a given context. These are called
+\texttt{typeCheckModule} and \texttt{typeCheckDecl} respectively. To do this, it makes use
+of one central function called \texttt{typeCheckTerm} and a number of helpers.
+
+\texttt{typeCheckTerm} is a syntax-directed function that takes a term and,
+optionally, a type to check it against. If no type is given, it tries to infer
+the type. It has a case for every possible syntactic construct in the AST.
+
+When dealing with pattern matching, we make use of several helpers that convert
+a pattern to a declaration so that it can be added to the context. This allows
+us to check the bodies of case branches with the variables from the pattern in
+context. It is important to note that we have left exhaustivity checking
+unimplemented due to time constraints. This does not reduce the expressiveness
+of our language, but it would be a useful warning to report to the user, and a
+good exercise to implement.
+
+Type checking type and data constructor applications requires checking the
+arguments against a ``telescope" of formals that have type signatures or
+constraints that must be obeyed. Since this checking is complex, we define some
+helper functions and use those. One key aspect of these functions is that,
+because this is a dependent type system, each subsequent formal in a telescope
+may reference the names of previous formals. Hence the telescoping structure,
+wherein every time we successfully check an actual argument with a formal, we
+extend the context with this new definition of the name so that later formals
+in the telescope can use it.
+
+Throughout the type checker, we use functions from the \texttt{Equality} module
+in order to compare two terms for equivalence, reduce terms to weak head normal
+form, unify two terms, and ensure that certain terms have certain types. See
+below for details.
+
+\subsection{Equality.hs}\label{equal}
+This file defines definitional equality for our type system. The key functions
+it exports are \texttt{equal}, for checking if two terms are definitionally
+equal; \texttt{whnf}, for reducing a term to weak head normal form; and
+\texttt{unify}, for unifying terms to make them equivalent. There are other
+functions defined here for various small conveniences.
+
+\texttt{equal}, \texttt{whnf}, and \texttt{unify} are, like
+\texttt{typeCheckTerm}, all structured as casing
+over the various syntactic forms in the AST. While these were simple to
+implement, they harbor a depth and subtlety seen nowhere else in this type
+checker. We do not purport to fully understand how and why unification works.
+This is one place where we are unsure what effect a small change in the
+implementation might have. However, we understand that unification is used for
+creating declarations that unify (i.e. produce a single declaration that
+extends the context with a succint definition) patterns in pattern matching branches with
+the scrutinee, and constraints in data types with the arguments passed in to
+constructors.
+
+\subsection{Scanner.x and Parser.y}
+We implemented the scanner and parser in Alex and Happy, respectively. The
+parser uses a state monad that carries the names of type and data constructors
+so that we can use them in the type checker. Our initial idea when we
+implemented data types was to differentiate them from other variable names
+during parsing using this
+monad, but unfortunately Happy does not appear to support this feature.
+
+Currently, there are many shift/reduce and reduce/reduce errors, mainly due to
+ambiguities surrounding the parsing of function application and
+constructor application. If we had more time, we would rewrite this as a parser
+combinator using \texttt{Parsec}.
+
+\subsection{PrettyPrint.hs}
+This file implements a very basic pretty printer for our language. There is
+nothing especially to note here.
