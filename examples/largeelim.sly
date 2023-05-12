@@ -1,4 +1,4 @@
-not : Bool -> Bool .
+not : Bool -> Bool.
 not = \x. if x then False else True.
 
 t : Bool -> U.
@@ -6,3 +6,15 @@ t = \b. if b then Unit else Bool.
 
 bar : (y : Bool) -> t y.
 bar = \b. if b then () else True.
+
+x : Unit.
+x = bar True.
+
+y : Bool.
+y = bar False.
+
+z : (Unit = t True).
+z = Refl.
+
+w : (Bool = t False).
+w = Refl.
